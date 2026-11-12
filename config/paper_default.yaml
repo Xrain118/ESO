@@ -1,0 +1,130 @@
+# Parameters reported by the identified paper revision.
+# Do not replace these values with Dragonfly SITL, HIL, or hardware tuning.
+schema_version: 1
+
+# 论文符号速查（配置键仍使用英文，避免影响后续程序读取）：
+#   p, p_d, p̃ = p - p_d   : 实际位置、期望位置、位置跟踪误差
+#   v, ω                   : 机体线速度、机体系角速度
+#   R, R_d, R̃ = R_d^T R   : 实际姿态、期望姿态、姿态误差旋转矩阵
+#   q̃ = [q̃_0, q̃_v^T]^T   : 姿态误差四元数；控制器约束其向量部分 q̃_v
+#   Δ_v, Δ_ω               : 机械臂对飞行器产生的未知耦合力、耦合角加速度
+#   Δ̂_v, Δ̂_ω              : 位置 ESO、姿态 ESO 对上述耦合项的估计
+#   ρ_p(t), ρ_q(t)         : 位置、姿态性能包络的上界函数
+#   β_p(t), β_q(t)         : 位置、姿态预设误差轨迹
+#   z_p = p̃ - β_p          : 位置误差相对预设轨迹的偏差
+#   z_q = q̃_v - β_q        : 姿态误差相对预设轨迹的偏差
+#   s_p, s_q               : 位置、姿态滑模向量
+
+paper:
+  identifier: "arXiv:2512.22957"
+  revision: "v1 (2025-12-28)"
+  doi: "10.48550/arXiv.2512.22957"
+  title: "PreGME: Prescribed Performance Control of Aerial Manipulators based on Variable-Gain ESO"
+  authors:
+    - "Mengyu Ji"
+    - "Shiliang Guo"
+    - "Zhengzhen Li"
+    - "Jiahao Shen"
+    - "Huazi Cao"
+    - "Shiyu Zhao"
+  source_file: "摇水瓶+推车.pdf"
+  reported_same_parameters_for_simulation_and_experiments: true
+  # Keep false until the missing implementation details and reported-unit
+  # inconsistency listed under verification are resolved.
+  formulas_frozen: false
+
+# 论文数值仿真和实机实验使用的标称平台参数。
+# m_B 是四旋翼基体质量，m_R 是机械臂质量；这些不是 Dragonfly 实机参数。
+nominal_platform:
+  quadcopter_mass_kg: 5.40            # m_B
+  robotic_arm_mass_kg: 2.32           # m_R
+  wheelbase_m: 0.90
+  robotic_arm_workspace_radius_m: 0.38
+
+# 变增益函数，论文式 (4)：
+#   g(e) = [(exp(e) + exp(-e)) / (w(exp(e) + exp(-e)) + d)] e
+# w 决定大误差时的增益上限，d 降低小误差时的增益以抑制噪声。
+variable_gain:
+  w: 0.5                              # 论文符号 w
+  d: 5.0                              # 论文符号 d
+  reported_unit: "not stated"
+
+position:
+  # 位置性能包络 ρ_p(t)：
+  #   ρ_p(t) = (ρ_p,0 - ρ_p,∞) exp(-l_p t) + ρ_p,∞
+  # 实际位置误差应满足 |p̃_i(t)| < ρ_p,i(t)。
+  performance_envelope:
+    rho_0_m: [3.0, 3.0, 3.0]          # ρ_p,0：初始包络半宽
+    rho_inf_m: [0.05, 0.05, 0.05]     # ρ_p,∞：稳态包络半宽
+    l_s_inv: 1.0                      # l_p：包络指数收敛率
+
+  # 位置预设误差轨迹 β_p(t)，论文式 (5)：
+  #   β_p,i(t) = β_p,i(0) exp(-l_p t)
+  #              + (b_p,i/c_p,i)(1 - exp(-c_p,i t)) exp(-l_p t)
+  #   β_p(0) = p̃(0),  b_p = l_p p̃(0) + p̃_dot(0)
+  preset_error_trajectory:
+    c: [5.0, 5.0, 5.0]                # c_p
+    reported_unit: "not stated"
+
+  # 位置变增益 ESO，论文式 (7)：
+  #   ḣ_v,i = α_v,i g(e_v,i)/ε_v,i + u_v,i
+  #   e_v,i = v_i - h_v,i
+  #   Δ̂_v,i = α_v,i g(e_v,i)/ε_v,i
+  eso:
+    alpha_s_inv: [0.1, 0.1, 0.1]      # α_v
+    epsilon: [0.5, 0.5, 0.5]          # ε_v
+    initial_condition: "h_v(0) = v(0)"
+
+  # 位置滑模向量和控制律，论文式 (8)-(9)：
+  #   z_p = p̃ - β_p
+  #   s_p = ż_p + Λ_p z_p
+  #   T = (m_B + m_R)(g n + Δ̂_v - p̈_d - β̈_p + Λ_p ż_p + K_p s_p)
+  control:
+    k_diagonal: [3.0, 3.0, 3.0]       # K_p = diag(3, 3, 3)
+    k_reported_unit: "s^-1"
+    lambda_diagonal: [3.0, 3.0, 3.0]  # Λ_p = diag(3, 3, 3)
+    lambda_reported_unit: "s^-1"
+
+attitude:
+  # 姿态性能包络 ρ_q(t)：
+  #   ρ_q(t) = (ρ_q,0 - ρ_q,∞) exp(-l_q t) + ρ_q,∞
+  # 包络约束的是姿态误差四元数的向量部分：|q̃_v,i(t)| < ρ_q,i(t)。
+  performance_envelope:
+    rho_0: [0.4, 0.4, 0.4]            # ρ_q,0
+    rho_inf: [0.06, 0.06, 0.06]       # ρ_q,∞
+    l_s_inv: 1.0                      # l_q
+
+  # 姿态预设误差轨迹 β_q(t)，形式同论文式 (5)：
+  #   β_q(0) = q̃_v(0),  b_q = l_q q̃_v(0) + q̃_v_dot(0)
+  preset_error_trajectory:
+    c: [5.0, 5.0, 5.0]                # c_q
+    reported_unit: "not stated"
+
+  # 姿态变增益 ESO，论文式 (14)：
+  #   ḣ_ω,i = α_ω,i g(e_ω,i)/ε_ω,i + u_ω,i
+  #   e_ω,i = ω_i - h_ω,i
+  #   Δ̂_ω,i = α_ω,i g(e_ω,i)/ε_ω,i
+  eso:
+    alpha_s_inv: [1.0, 1.0, 1.0]      # α_ω
+    epsilon: [0.25, 0.25, 0.25]       # ε_ω
+    initial_condition: "h_omega(0) = omega(0)"
+
+  # 姿态滑模向量和控制律，论文式 (19)-(21)：
+  #   z_q = q̃_v - β_q
+  #   s_q = ż_q + Λ_q z_q
+  #   τ = 2 I Q^-1[-f_q - (1/2)Q Δ̂_ω + β̈_q - Λ_q ż_q - K_q s_q]
+  # 量纲分析表明 K_q、Λ_q 均应为 s^-1；论文第 7 页印成 s^-2。
+  control:
+    k_diagonal: [12.0, 12.0, 10.0]    # K_q = diag(12, 12, 10)
+    k_unit: "s^-1"
+    k_paper_reported_unit: "s^-2"
+    lambda_diagonal: [14.0, 14.0, 10.0]  # Λ_q = diag(14, 14, 10)
+    lambda_unit: "s^-1"
+    lambda_paper_reported_unit: "s^-2"
+
+verification:
+  unresolved:
+    - "The quadcopter inertia matrix I is used by the control law but is not numerically reported."
+    - "The controller/ESO execution period and continuous-to-discrete method are not reported."
+    - "Control saturation, derivative generation, and numerical protection details are not reported."
+    - "The paper prints both K_q and Lambda_q in s^-2, but equations (19)-(22) require s^-1; the implementation unit is corrected to s^-1 pending an author correction."

@@ -1,0 +1,15 @@
+[Unit]
+Description=Dragonfly ESO PreGME interface
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Environment=ROS_DOMAIN_ID=73
+ExecStart=/bin/bash -lc 'source /opt/ros/humble/setup.bash && source /home/ubuntu/px4_ros2_ws/install/setup.bash && source /home/ubuntu/ESO/install/setup.bash && exec ros2 launch eso_bringup onboard.launch.py'
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

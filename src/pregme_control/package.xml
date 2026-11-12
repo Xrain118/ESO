@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pregme_control</name>
+  <version>0.1.0</version>
+  <description>Onboard ROS 2 interface between PreGME and PX4.</description>
+  <maintainer email="maintainer@example.com">Dragonfly ESO</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>px4_msgs</depend>
+  <depend>eso_interfaces</depend>
+  <depend>pregme_core</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>
