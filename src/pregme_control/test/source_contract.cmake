@@ -1,4 +1,11 @@
-file(READ "${SOURCE}" SOURCE_TEXT)
+file(GLOB_RECURSE PRODUCTION_SOURCES
+  "${SOURCE_ROOT}/src/*.cpp"
+  "${SOURCE_ROOT}/include/*.hpp")
+set(SOURCE_TEXT "")
+foreach(SOURCE IN LISTS PRODUCTION_SOURCES)
+  file(READ "${SOURCE}" CONTENT)
+  string(APPEND SOURCE_TEXT "\n${CONTENT}")
+endforeach()
 string(TOLOWER "${SOURCE_TEXT}" SOURCE_LOWER)
 
 foreach(FORBIDDEN

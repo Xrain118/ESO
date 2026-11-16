@@ -24,6 +24,9 @@ SafetyDecision SafetyGate::evaluate(
   }
 
   decision.requested_mode = static_cast<Mode>(requested_mode);
+  const bool shadow_or_active = decision.requested_mode != Mode::Native;
+  const bool active_requested = decision.requested_mode == Mode::BoundedCompensation ||
+    decision.requested_mode == Mode::FullControl;
 
   if (!inputs.local_position_valid ||
     !fresh(inputs.now_ns, inputs.local_position_received_ns, config_.state_timeout_ns))
@@ -50,6 +53,24 @@ SafetyDecision SafetyGate::evaluate(
   {
     decision.fault_flags |= FaultAllocatorStatus;
   }
+  if (shadow_or_active &&
+    (!inputs.reference_valid ||
+    !fresh(inputs.now_ns, inputs.reference_received_ns, config_.reference_timeout_ns)))
+  {
+    decision.fault_flags |= FaultReference;
+  }
+  if (shadow_or_active &&
+    (!inputs.native_thrust_valid ||
+    !fresh(inputs.now_ns, inputs.native_thrust_received_ns, config_.native_control_timeout_ns)))
+  {
+    decision.fault_flags |= FaultNativeThrust;
+  }
+  if (shadow_or_active &&
+    (!inputs.native_torque_valid ||
+    !fresh(inputs.now_ns, inputs.native_torque_received_ns, config_.native_control_timeout_ns)))
+  {
+    decision.fault_flags |= FaultNativeTorque;
+  }
   if (!inputs.timestamp_monotonic) {
     decision.fault_flags |= FaultTimestamp;
   }
@@ -58,6 +79,30 @@ SafetyDecision SafetyGate::evaluate(
   }
   if (!inputs.values_finite) {
     decision.fault_flags |= FaultNonFinite;
+  }
+  if (!inputs.parameters_valid) {
+    decision.fault_flags |= FaultParameterInvalid;
+  }
+  if (inputs.failsafe) {
+    decision.fault_flags |= FaultFailsafe;
+  }
+
+  if (active_requested) {
+    if (!inputs.armed) {
+      decision.fault_flags |= FaultNotArmed;
+    }
+    if (!inputs.offboard) {
+      decision.fault_flags |= FaultNotOffboard;
+    }
+    if (inputs.reentry_required) {
+      decision.fault_flags |= FaultReentryRequired;
+    }
+    if (inputs.has_placeholder && !inputs.placeholder_allowed) {
+      decision.fault_flags |= FaultPlaceholderParameters;
+    }
+    if (inputs.has_placeholder && inputs.placeholder_allowed && !inputs.simulation_context_valid) {
+      decision.fault_flags |= FaultSimulationContext;
+    }
   }
 
   decision.inputs_valid = decision.fault_flags == FaultNone;

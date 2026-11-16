@@ -14,19 +14,35 @@ struct SafetyInputs {
   std::int64_t angular_velocity_received_ns{0};
   std::int64_t vehicle_status_received_ns{0};
   std::int64_t allocator_status_received_ns{0};
+  std::int64_t reference_received_ns{0};
+  std::int64_t native_thrust_received_ns{0};
+  std::int64_t native_torque_received_ns{0};
   bool local_position_valid{false};
   bool attitude_valid{false};
   bool angular_velocity_valid{false};
   bool vehicle_status_valid{false};
   bool allocator_status_valid{false};
+  bool reference_valid{false};
+  bool native_thrust_valid{false};
+  bool native_torque_valid{false};
   bool timestamp_monotonic{true};
   bool estimator_reset{false};
   bool values_finite{false};
+  bool armed{false};
+  bool offboard{false};
+  bool failsafe{false};
+  bool parameters_valid{true};
+  bool has_placeholder{false};
+  bool placeholder_allowed{false};
+  bool simulation_context_valid{false};
+  bool reentry_required{false};
 };
 
 struct SafetyConfig {
   std::int64_t state_timeout_ns{200000000};
   std::int64_t allocator_timeout_ns{250000000};
+  std::int64_t reference_timeout_ns{200000000};
+  std::int64_t native_control_timeout_ns{200000000};
 };
 
 struct SafetyDecision {

@@ -20,7 +20,9 @@ Gazebo、URDF/Xacro、PX4 SITL、仿真场景和仿真验收位于外部仓库 `
 
 ## 当前实现状态
 
-当前代码已经建立 ROS 2 包、PX4 数据契约、四模式状态机和安全门控。由于工作区尚无论文原文及公式追踪表，PreGME 数学控制律尚未实现，`enable_control_output` 默认且必须保持为 `false`。原生模式和影子模式可用于数据链验证；有限补偿和完整控制模式会被安全门控拒绝，不会发布飞行控制量。
+M0 基线和 M1 公式/接口已经冻结：论文式 (1)～(24)、勘误、字段级缺参、PX4 八路输入、时间戳/重置语义、参数热更新和占位参数门禁均有可执行契约。PreGME 数学控制律仍未实现，`pregme::algorithm_ready()` 保持 `false`，`enable_control_output` 默认保持 `false`。原生模式和影子模式可用于数据链验证；有限补偿和完整控制模式仍会被安全门控拒绝，不会发布飞行控制量。
+
+位置通道将在 M2 按论文参数完成数值参考实现；姿态通道因论文未给惯量，先使用带强制水印的合成夹具做结构、符号和量纲验证。占位参数默认禁止进入模式 2/3，仅在显式许可且仿真时钟证明成立的 SITL 中保留未来放行路径。
 
 ## 构建
 
@@ -40,4 +42,4 @@ source /home/ubuntu/ESO-simple-quadcopter/install/setup.bash
 ros2 launch eso_bringup onboard.launch.py
 ```
 
-默认参数是模式 0（PX4 原生）和控制输出关闭。启动前应阅读 [软件架构](软件架构.md)、[PX4 接口契约](docs/px4_interface.md)和[硬件平台说明](docs/hardware_platform.md)。
+默认参数是模式 0（PX4 原生）和控制输出关闭。启动前应阅读 [软件架构](软件架构.md)、[公式追踪](docs/formula_traceability.md)、[uORB/DDS 契约](docs/uorb_contract.md)、[参数字典](docs/parameter_dictionary.md)和[硬件平台说明](docs/hardware_platform.md)。

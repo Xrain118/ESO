@@ -1,0 +1,59 @@
+schema_version: 1
+fixture_id: m2_fixture_v1
+parameter_set_sha256: 964ca70ac47dc572d8a0214801d45b119d2dd1e9f55dd77f9ee107537368554b
+watermark: FIXTURE:m2_fixture_v1:964ca70ac47d
+
+reported_inputs:
+  body_mass:
+    value: 5.40
+    unit: kg
+    frame: quadcopter_base
+    source: arXiv:2512.22957v1 Section IV
+    status: reported
+  arm_mass:
+    value: 2.32
+    unit: kg
+    frame: robotic_arm
+    source: arXiv:2512.22957v1 Section IV
+    status: reported
+  wheelbase:
+    value: 0.90
+    unit: m
+    frame: quadcopter_base
+    source: arXiv:2512.22957v1 Section IV
+    status: reported
+
+placeholders:
+  inertia_matrix:
+    value: [[0.48, 0.0, 0.0], [0.0, 0.48, 0.0], [0.0, 0.0, 0.70]]
+    unit: kg*m^2
+    frame: quadcopter_body_FRD
+    source: synthetic dimensional fixture constrained by reported mass and wheelbase
+    status: placeholder
+    paper_status: permanently_missing
+    uncertainty: unbounded
+    radius_of_gyration_m: [0.298142397, 0.298142397, 0.36004115]
+    replacement_condition: replace with measured Dragonfly body inertia before HIL or hardware control
+    failure_consequence: blocks torque magnitude and saturation claims, not symbolic tracking-curve checks
+  control_period:
+    value: 0.01
+    unit: s
+    frame: PX4_sample_time
+    source: paper experimental communication rate 100 Hz; not a reported controller period
+    status: placeholder
+    uncertainty: unknown
+    replacement_condition: replace when author timing or measured onboard timing is available
+    failure_consequence: blocks claims about paper timing fidelity and real-time margin
+  saturation_and_derivative_policy:
+    value:
+      reference_saturation: disabled
+      integration: rk4
+      desired_attitude_derivative: quaternion_log_difference
+      derivative_low_pass_cutoff_hz: 20.0
+    unit: mixed
+    frame: NED_FRD_contract
+    source: M1 engineering policy
+    status: placeholder
+    uncertainty: implementation_defined
+    replacement_condition: replace saturation limits from allocation tests before M6; replace derivative policy if author data arrives
+    failure_consequence: active modes remain prohibited outside explicitly verified SITL
