@@ -11,8 +11,8 @@ pregme_control:
     fixture:
       has_placeholder: true
       id: m2_fixture_v1
-      parameter_set_sha256: 964ca70ac47dc572d8a0214801d45b119d2dd1e9f55dd77f9ee107537368554b
-      watermark: FIXTURE:m2_fixture_v1:964ca70ac47d
+      parameter_set_sha256: 072d67e9ccfbfb78abbf7fed9625f4490b8a76a259a041abe97d864a17036764
+      watermark: FIXTURE:m2_fixture_v1:072d67e9ccfb
       body_mass_kg: 5.40
       arm_mass_kg: 2.32
       wheelbase_m: 0.90

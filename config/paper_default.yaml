@@ -1,5 +1,5 @@
 # Parameters reported by the identified paper revision.
-# Do not replace these values with Dragonfly SITL, HIL, or hardware tuning.
+# Do not replace these values with quadrotor SITL, HIL, or hardware tuning.
 schema_version: 1
 
 # 论文符号速查（配置键仍使用英文，避免影响后续程序读取）：
@@ -37,7 +37,7 @@ paper:
   formulas_frozen: true
 
 # 论文数值仿真和实机实验使用的标称平台参数。
-# m_B 是四旋翼基体质量，m_R 是机械臂质量；这些不是 Dragonfly 实机参数。
+# m_B 是论文四旋翼基体质量，m_R 是论文机械臂质量；这些不是本分支实机参数。
 nominal_platform:
   quadcopter_mass_kg: 5.40            # m_B
   robotic_arm_mass_kg: 2.32           # m_R
@@ -141,7 +141,7 @@ verification:
       affected_equations: [13, 14, 17, 18, 21]
       current_temporary_value: "m2_fixture diagonal matrix only"
       source: "synthetic dimensional fixture; not a paper or hardware value"
-      replacement_condition: "replace with measured Dragonfly body inertia before HIL or hardware control"
+      replacement_condition: "replace with measured quadrotor body inertia before HIL or hardware control"
       failure_consequence: "blocks torque magnitude and saturation claims, not structural tracking checks"
       paper_status: "permanently_missing"
     control_period:

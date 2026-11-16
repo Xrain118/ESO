@@ -27,7 +27,7 @@
 - `fixture.has_placeholder=true`
 - `fixture.id=m2_fixture_v1`
 - `fixture.parameter_set_sha256` 为规范化参数和元数据的 SHA-256
-- `fixture.watermark=FIXTURE:m2_fixture_v1:964ca70ac47d`，并与哈希前缀自动交叉校验
+- `fixture.watermark=FIXTURE:m2_fixture_v1:072d67e9ccfb`，并与哈希前缀自动交叉校验
 - `fixture.body_mass_kg=5.40`、`arm_mass_kg=2.32`、`wheelbase_m=0.90` 来自论文
 - 合成对角惯量为 `[0.48,0.48,0.70] kg·m²`
 - 位置/姿态周期均为 0.01 s，允许测试区间 0.005-0.02 s
@@ -39,5 +39,5 @@
 
 - `paper_default.yaml` 只保存论文事实、公式判读、缺参和勘误，不得被 SITL/实机调参覆盖。
 - `m2_fixture.yaml` 允许占位，只能用于 M2/M3 和经双重证明的 M8 SITL。
-- `dragonfly_hw` 将来保存测量值；任何替换必须保留单位、坐标、来源、不确定度和替换日期。
+- `quadrotor_hw` 将来保存测量值；任何替换必须保留单位、坐标、来源、不确定度和替换日期。
 - 标准重力可作为永不变化的物理常量进入代码；质量、惯量、几何、性能和限幅不得用宏固化。

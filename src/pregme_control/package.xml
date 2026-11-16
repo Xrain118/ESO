@@ -3,7 +3,7 @@
   <name>pregme_control</name>
   <version>0.1.0</version>
   <description>Onboard ROS 2 interface between PreGME and PX4.</description>
-  <maintainer email="maintainer@example.com">Dragonfly ESO</maintainer>
+  <maintainer email="maintainer@example.com">ESO Project</maintainer>
   <license>Apache-2.0</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>

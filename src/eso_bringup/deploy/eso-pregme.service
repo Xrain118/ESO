@@ -1,5 +1,5 @@
 [Unit]
-Description=Dragonfly ESO PreGME interface
+Description=Quadrotor ESO PreGME interface
 After=network-online.target
 Wants=network-online.target
 

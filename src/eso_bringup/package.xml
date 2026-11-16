@@ -3,7 +3,7 @@
   <name>eso_bringup</name>
   <version>0.1.0</version>
   <description>Onboard launch and configuration entry point for ESO.</description>
-  <maintainer email="maintainer@example.com">Dragonfly ESO</maintainer>
+  <maintainer email="maintainer@example.com">ESO Project</maintainer>
   <license>Apache-2.0</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <exec_depend>launch</exec_depend>
