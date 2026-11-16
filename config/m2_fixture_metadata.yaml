@@ -1,59 +1,90 @@
-schema_version: 1
-fixture_id: m2_fixture_v1
+# =============================================================================
+# M2 夹具（fixture）参数溯源元数据
+# -----------------------------------------------------------------------------
+# 作用：记录 M2 仿真夹具所用每个参数的来源与可信度，区分【论文明确报告的量】
+#       与【工程占位假设值】，并说明占位值的替换条件和误用后的失效后果。
+# 校验：src/pregme_control/test/config_contract.py 会读取本文件，与
+#       config/m2_fixture.yaml 一起做规范化哈希，校验 parameter_set_sha256
+#       与 watermark 是否过期。哈希基于解析后的内容，新增注释不影响校验。
+# 注意：占位值不可用于硬件/HIL 结论，仅限 M2 符号级与 SITL 范围内的验证。
+# =============================================================================
+
+schema_version: 1                 # 元数据格式版本，结构变更时递增
+fixture_id: m2_fixture_v1         # 夹具唯一标识，与 m2_fixture.yaml 中的 id 一致
+# 参数集规范化 SHA-256：对 runtime + metadata（剔除本字段和 watermark）排序后计算
 parameter_set_sha256: 072d67e9ccfbfb78abbf7fed9625f4490b8a76a259a041abe97d864a17036764
+# 结果水印：FIXTURE:<fixture_id>:<sha256 前 12 位>，用于标记实验输出所用参数集
 watermark: FIXTURE:m2_fixture_v1:072d67e9ccfb
 
+# -----------------------------------------------------------------------------
+# 论文中明确报告的输入量（status: reported）
+# 这些值可直接用于复现论文设定，可信度较高。
+# -----------------------------------------------------------------------------
 reported_inputs:
-  body_mass:
+  body_mass:                      # 机体（四旋翼平台）质量
     value: 5.40
     unit: kg
-    frame: quadcopter_base
-    source: arXiv:2512.22957v1 Section IV
-    status: reported
-  arm_mass:
+    frame: quadcopter_base        # 坐标系：四旋翼机体系
+    source: arXiv:2512.22957v1 Section IV   # 出处：论文第 IV 节
+    status: reported              # 状态：论文明确报告
+  arm_mass:                       # 机械臂质量
     value: 2.32
     unit: kg
-    frame: robotic_arm
+    frame: robotic_arm            # 坐标系：机械臂坐标系
     source: arXiv:2512.22957v1 Section IV
     status: reported
-  wheelbase:
+  wheelbase:                      # 轴距（对角电机间距），用于约束惯量的量级
     value: 0.90
     unit: m
     frame: quadcopter_base
     source: arXiv:2512.22957v1 Section IV
     status: reported
 
+# -----------------------------------------------------------------------------
+# 占位/假设值（status: placeholder）
+# 论文未给出或永久缺失的参数，按工程规则临时填充。使用这些值的结论必须显式
+# 标注为“基于占位参数”，并遵守各自 reserved 的替换条件与失效范围。
+# -----------------------------------------------------------------------------
 placeholders:
-  inertia_matrix:
+  inertia_matrix:                 # 机体转动惯量矩阵（论文永久缺失）
     value: [[0.48, 0.0, 0.0], [0.0, 0.48, 0.0], [0.0, 0.0, 0.70]]
     unit: kg*m^2
-    frame: quadcopter_body_FRD
+    frame: quadcopter_body_FRD  # 坐标系：机体 FRD（前-右-下）
+    # 来源：依据报告的机重与轴距做量纲约束合成的值，并非实测
     source: synthetic dimensional fixture constrained by reported mass and wheelbase
     status: placeholder
-    paper_status: permanently_missing
-    uncertainty: unbounded
+    paper_status: permanently_missing   # 论文中永久缺失，不会再有官方值
+    uncertainty: unbounded       # 不确定度无界（只有量级约束，无置信区间）
+    # 回转半径 = sqrt(I/m)，用于验证合成惯量与机重/轴距的量级自洽
     radius_of_gyration_m: [0.298142397, 0.298142397, 0.36004115]
+    # 替换条件：进入 HIL 或硬件控制前，必须替换为实测机体惯量
     replacement_condition: replace with measured quadrotor body inertia before HIL or hardware control
+    # 失效后果：阻塞力矩幅值与饱和相关结论；符号级跟踪曲线检查不受影响
     failure_consequence: blocks torque magnitude and saturation claims, not symbolic tracking-curve checks
-  control_period:
+  control_period:                 # 控制周期（论文未报告控制器周期）
     value: 0.01
     unit: s
-    frame: PX4_sample_time
+    frame: PX4_sample_time        # 对应 PX4 采样节拍
+    # 来源：取论文实验通信速率 100 Hz，属于代理值而非控制器真实周期
     source: paper experimental communication rate 100 Hz; not a reported controller period
     status: placeholder
-    uncertainty: unknown
+    uncertainty: unknown          # 不确定度未知
+    # 替换条件：获得作者时序或实测机载时序后替换
     replacement_condition: replace when author timing or measured onboard timing is available
+    # 失效后果：阻塞关于论文时序保真度与实时余量的结论
     failure_consequence: blocks claims about paper timing fidelity and real-time margin
-  saturation_and_derivative_policy:
+  saturation_and_derivative_policy:   # 饱和限幅与期望姿态导数生成策略
     value:
-      reference_saturation: disabled
-      integration: rk4
-      desired_attitude_derivative: quaternion_log_difference
-      derivative_low_pass_cutoff_hz: 20.0
-    unit: mixed
-    frame: NED_FRD_contract
-    source: M1 engineering policy
+      reference_saturation: disabled            # 参考信号饱和：关闭
+      integration: rk4                          # 积分器：四阶 Runge-Kutta
+      desired_attitude_derivative: quaternion_log_difference  # 期望姿态导数：四元数对数差分
+      derivative_low_pass_cutoff_hz: 20.0       # 导数低通滤波截止频率 [Hz]
+    unit: mixed                   # 混合单位（开关/枚举/Hz）
+    frame: NED_FRD_contract       # 坐标系约定：NED 世界系 + FRD 机体系
+    source: M1 engineering policy # 来源：M1 阶段工程策略，非论文数据
     status: placeholder
-    uncertainty: implementation_defined
+    uncertainty: implementation_defined   # 不确定度由具体实现决定
+    # 替换条件：M6 之前用分配测试确定饱和限幅；若有作者数据则替换导数策略
     replacement_condition: replace saturation limits from allocation tests before M6; replace derivative policy if author data arrives
+    # 失效后果：在明确验证过的 SITL 之外，禁止运行主动控制模式
     failure_consequence: active modes remain prohibited outside explicitly verified SITL

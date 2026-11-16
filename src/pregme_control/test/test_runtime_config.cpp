@@ -1,3 +1,10 @@
+// =============================================================================
+// RuntimeConfig 校验单元测试
+// -----------------------------------------------------------------------------
+// 目标：锁定「默认安全集可启动、夹具集必须自洽、启动期参数不可热改」三条
+//       规则。测试不依赖 ROS 运行时，只调用纯函数。
+// =============================================================================
+
 #include <gtest/gtest.h>
 
 #include "pregme_control/runtime_config.hpp"
@@ -5,6 +12,8 @@
 namespace
 {
 
+// 构造一份自洽的占位夹具配置：身份三元组、质量/几何/惯量、采样周期
+// 都取 config/m2_fixture.yaml 的同组数值，任何单项失衡都应导致校验失败。
 pregme_control::RuntimeConfig placeholder_config()
 {
   pregme_control::RuntimeConfig config{};
@@ -27,16 +36,19 @@ pregme_control::RuntimeConfig placeholder_config()
   return config;
 }
 
+// 默认构造即机上安全默认值（Native、输出关闭、无夹具），必须校验通过。
 TEST(RuntimeConfig, SafeDefaultsAreValid)
 {
   EXPECT_TRUE(pregme_control::validate_runtime_config({}).valid);
 }
 
+// 自洽的占位夹具应通过校验（正例，避免校验过严）。
 TEST(RuntimeConfig, PlaceholderFixtureIsSelfConsistent)
 {
   EXPECT_TRUE(pregme_control::validate_runtime_config(placeholder_config()).valid);
 }
 
+// 模式越界和相对话题名都必须被拒绝。
 TEST(RuntimeConfig, RejectsInvalidModeRangeAndRelativeTopics)
 {
   auto config = pregme_control::RuntimeConfig{};
@@ -47,6 +59,7 @@ TEST(RuntimeConfig, RejectsInvalidModeRangeAndRelativeTopics)
   EXPECT_FALSE(pregme_control::validate_runtime_config(config).valid);
 }
 
+// 只改惯量不改质量会破坏回转半径自洽性，必须被拒绝。
 TEST(RuntimeConfig, RejectsInconsistentFixtureInertia)
 {
   auto config = placeholder_config();
@@ -54,6 +67,7 @@ TEST(RuntimeConfig, RejectsInconsistentFixtureInertia)
   EXPECT_FALSE(pregme_control::validate_runtime_config(config).valid);
 }
 
+// 水印无法由 id + 哈希前缀重建时视为过期，必须被拒绝。
 TEST(RuntimeConfig, RejectsStaleFixtureWatermark)
 {
   auto config = placeholder_config();
@@ -61,6 +75,8 @@ TEST(RuntimeConfig, RejectsStaleFixtureWatermark)
   EXPECT_FALSE(pregme_control::validate_runtime_config(config).valid);
 }
 
+// has_placeholder=false 不能掩盖残留的夹具数值：只要还带着物理参数，
+// 就必须提供完整身份三元组。
 TEST(RuntimeConfig, PlaceholderFlagCannotHideFixtureValues)
 {
   auto config = placeholder_config();
@@ -71,6 +87,7 @@ TEST(RuntimeConfig, PlaceholderFlagCannotHideFixtureValues)
   EXPECT_FALSE(pregme_control::validate_runtime_config(config).valid);
 }
 
+// 运行期热更新白名单：只有模式和输出总开关，其余参数一律启动期固定。
 TEST(RuntimeConfig, OnlyModeAndHardOutputSwitchAreMutable)
 {
   EXPECT_TRUE(pregme_control::is_runtime_mutable_parameter("mode"));

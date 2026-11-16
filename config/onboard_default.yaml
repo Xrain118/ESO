@@ -1,24 +1,52 @@
+# =============================================================================
+# 机上默认参数（onboard_default.yaml）
+# -----------------------------------------------------------------------------
+# 用途：机载运行时（SITL / 实机）的默认配置，由 eso_bringup 的
+#       onboard.launch.py 加载给 pregme_control 节点。
+# 定位：安全默认值——纯 PX4 原生模式、控制输出关闭、不携带任何夹具参数。
+# 校验：src/pregme_control/test/config_contract.py 要求本文件必须满足：
+#       mode == 0、enable_control_output == false、allow_placeholder_in_sitl == false、
+#       fixture.has_placeholder == false，且 topics 与冻结的话题契约完全一致。
+# 注意：本文件不允许填入论文/M2 夹具参数；调参请使用独立参数覆盖，不要改这里。
+# =============================================================================
+
 pregme_control:
   ros__parameters:
+    # 运行模式：0=Native（纯 PX4 原生控制），PregME 只观测不介入。
     mode: 0
+    # 控制输出总开关：false，节点绝不向 PX4 写推力/力矩指令。
     enable_control_output: false
+    # 状态消息（PregmeStatus）发布频率 [Hz]。
     status_rate_hz: 50.0
+    # 状态类输入失效超时 [ms]，超时置对应故障位。
     state_timeout_ms: 200
+    # 控制分配器状态超时 [ms]。
     allocator_timeout_ms: 250
+    # 是否允许 SITL 使用占位参数：默认 false，占位参数不得放行主动控制。
     allow_placeholder_in_sitl: false
+    # 仿真时钟（use_sim_time）未更新的超时阈值 [ms]。
     simulation_clock_timeout_ms: 200
+    # 仿真时间与系统时间允许偏差 [ms]。
     simulation_time_tolerance_ms: 100
+
+    # 夹具声明：机上默认配置不携带任何夹具参数，全部置空/关闭。
     fixture:
+      # 不含占位参数（契约要求必须为 false）。
       has_placeholder: false
+      # 夹具标识：none 表示未使用夹具。
       id: none
+      # 参数集哈希：none 表示未绑定参数集。
       parameter_set_sha256: none
+      # 结果水印：none 表示不携带水印。
       watermark: none
+
+    # PX4 uORB 桥接话题契约（固定不可变，必须与冻结契约一致）。
     topics:
-      local_position: /fmu/out/vehicle_local_position
-      attitude: /fmu/out/vehicle_attitude
-      angular_velocity: /fmu/out/vehicle_angular_velocity
-      vehicle_status: /fmu/out/vehicle_status_v1
-      allocator_status: /fmu/out/control_allocator_status
-      reference: /fmu/out/vehicle_local_position_setpoint
-      native_thrust: /fmu/out/vehicle_thrust_setpoint
-      native_torque: /fmu/out/vehicle_torque_setpoint
+      local_position: /fmu/out/vehicle_local_position              # 局部位置估计
+      attitude: /fmu/out/vehicle_attitude                          # 姿态四元数
+      angular_velocity: /fmu/out/vehicle_angular_velocity          # 机体角速度
+      vehicle_status: /fmu/out/vehicle_status_v1                   # 飞行器状态（解锁/Offboard/失效保护）
+      allocator_status: /fmu/out/control_allocator_status          # 控制分配器状态
+      reference: /fmu/out/vehicle_local_position_setpoint          # 位置参考设定点
+      native_thrust: /fmu/out/vehicle_thrust_setpoint              # PX4 原生推力设定点
+      native_torque: /fmu/out/vehicle_torque_setpoint              # PX4 原生力矩设定点

@@ -1,6 +1,14 @@
-# Parameters reported by the identified paper revision.
-# Do not replace these values with quadrotor SITL, HIL, or hardware tuning.
-schema_version: 1
+# =============================================================================
+# 论文默认参数（paper_default.yaml）
+# -----------------------------------------------------------------------------
+# 用途：记录被识别论文版本中明确报告的参数、公式判读（勘误）以及论文缺参事实，
+#       供公式复现/M2 夹具推导使用，也是 docs/formula_traceability.md 的依据。
+# 原则：本文件只保存“论文事实 + 工程判读”，不得被 SITL、HIL 或实机调参覆盖。
+# 注意：报告中未给出的量（惯量、控制周期、饱和/导数策略）集中记录在
+#       verification.missing 中，不与勘误混写；临时值见 m2_fixture.yaml。
+# 来源：以下数值均由论文报告；请勿替换为四旋翼 SITL、HIL 或硬件整定值。
+# =============================================================================
+schema_version: 1                       # 本文件格式版本
 
 # 论文符号速查（配置键仍使用英文，避免影响后续程序读取）：
 #   p, p_d, p̃ = p - p_d   : 实际位置、期望位置、位置跟踪误差
@@ -15,20 +23,24 @@ schema_version: 1
 #   z_q = q̃_v - β_q        : 姿态误差相对预设轨迹的偏差
 #   s_p, s_q               : 位置、姿态滑模向量
 
+# -----------------------------------------------------------------------------
+# 论文标识：用于锁定参数所属的论文版本，保证复现可追溯。
+# -----------------------------------------------------------------------------
 paper:
-  identifier: "arXiv:2512.22957"
-  revision: "v1 (2025-12-28)"
-  doi: "10.48550/arXiv.2512.22957"
-  title: "PreGME: Prescribed Performance Control of Aerial Manipulators based on Variable-Gain ESO"
-  authors:
+  identifier: "arXiv:2512.22957"                    # arXiv 编号
+  revision: "v1 (2025-12-28)"                       # 版本号与日期
+  doi: "10.48550/arXiv.2512.22957"                  # DOI
+  title: "PreGME: Prescribed Performance Control of Aerial Manipulators based on Variable-Gain ESO"  # 论文标题
+  authors:                                          # 作者列表
     - "Mengyu Ji"
     - "Shiliang Guo"
     - "Zhengzhen Li"
     - "Jiahao Shen"
     - "Huazi Cao"
     - "Shiyu Zhao"
-  source_file: "摇水瓶+推车.pdf"
-  source_sha256: "790069c4f56680fa0b937d67854beaff2057f74de847f159d3a825d2b63aa4a9"
+  source_file: "摇水瓶+推车.pdf"                    # 本地论文源文件
+  source_sha256: "790069c4f56680fa0b937d67854beaff2057f74de847f159d3a825d2b63aa4a9"  # 源文件哈希，防串版本
+  # 论文声明仿真与实验使用同一套参数，因此参数可跨场景复用。
   reported_same_parameters_for_simulation_and_experiments: true
   # 表示论文已报告的包络、预设轨迹、ESO 与控制增益参数齐全；不表示论文给出了惯量和离散策略。
   params_complete: true
@@ -36,48 +48,55 @@ paper:
   # 数学执行核心尚未实现，algorithm_ready() 仍必须为 false。
   formulas_frozen: true
 
+# -----------------------------------------------------------------------------
 # 论文数值仿真和实机实验使用的标称平台参数。
 # m_B 是论文四旋翼基体质量，m_R 是论文机械臂质量；这些不是本分支实机参数。
+# -----------------------------------------------------------------------------
 nominal_platform:
-  quadcopter_mass_kg: 5.40            # m_B
-  robotic_arm_mass_kg: 2.32           # m_R
-  wheelbase_m: 0.90
-  robotic_arm_workspace_radius_m: 0.38
+  quadcopter_mass_kg: 5.40            # m_B：四旋翼基体质量 [kg]
+  robotic_arm_mass_kg: 2.32           # m_R：机械臂质量 [kg]
+  wheelbase_m: 0.90                   # 轴距 [m]
+  robotic_arm_workspace_radius_m: 0.38  # 机械臂工作空间半径 [m]
 
+# -----------------------------------------------------------------------------
 # 变增益函数，论文式 (4)：
 #   g(e) = [(exp(e) + exp(-e)) / (w(exp(e) + exp(-e)) + d)] e
 # w 决定大误差时的增益上限，d 降低小误差时的增益以抑制噪声。
+# -----------------------------------------------------------------------------
 variable_gain:
-  w: 0.5                              # 论文符号 w
-  d: 5.0                              # 论文符号 d
-  reported_unit: "not stated"
+  w: 0.5                              # 论文符号 w：大误差增益整形
+  d: 5.0                              # 论文符号 d：小误差增益衰减
+  reported_unit: "not stated"         # 论文未给出量纲（无单位）
 
+# -----------------------------------------------------------------------------
+# 位置环（外环）参数
+# -----------------------------------------------------------------------------
 position:
   # 位置性能包络 ρ_p(t)：
   #   ρ_p(t) = (ρ_p,0 - ρ_p,∞) exp(-l_p t) + ρ_p,∞
   # 实际位置误差应满足 |p̃_i(t)| < ρ_p,i(t)。
   performance_envelope:
-    rho_0_m: [3.0, 3.0, 3.0]          # ρ_p,0：初始包络半宽
-    rho_inf_m: [0.05, 0.05, 0.05]     # ρ_p,∞：稳态包络半宽
-    l_s_inv: 1.0                      # l_p：包络指数收敛率
+    rho_0_m: [3.0, 3.0, 3.0]          # ρ_p,0：初始包络半宽 [m]
+    rho_inf_m: [0.05, 0.05, 0.05]     # ρ_p,∞：稳态包络半宽 [m]
+    l_s_inv: 1.0                      # l_p：包络指数收敛率 [s^-1]
 
   # 位置预设误差轨迹 β_p(t)，论文式 (5)：
   #   β_p,i(t) = β_p,i(0) exp(-l_p t)
   #              + (b_p,i/c_p,i)(1 - exp(-c_p,i t)) exp(-l_p t)
   #   β_p(0) = p̃(0),  b_p = l_p p̃(0) + p̃_dot(0)
   preset_error_trajectory:
-    c: [5.0, 5.0, 5.0]                # c_p
+    c: [5.0, 5.0, 5.0]                # c_p：预设轨迹整形参数
     unit: "s^-1"                      # exp(-c_p t) 要求 c_p 为时间倒数
-    paper_reported_unit: "not stated"
+    paper_reported_unit: "not stated" # 论文未标注单位，由量纲分析确定
 
   # 位置变增益 ESO，论文式 (7)：
   #   ḣ_v,i = α_v,i g(e_v,i)/ε_v,i + u_v,i
   #   e_v,i = v_i - h_v,i
   #   Δ̂_v,i = α_v,i g(e_v,i)/ε_v,i
   eso:
-    alpha_s_inv: [0.1, 0.1, 0.1]      # α_v
-    epsilon: [0.5, 0.5, 0.5]          # ε_v
-    initial_condition: "h_v(0) = v(0)"
+    alpha_s_inv: [0.1, 0.1, 0.1]      # α_v：ESO 增益 [s^-1]
+    epsilon: [0.5, 0.5, 0.5]          # ε_v：ESO 时间缩放因子
+    initial_condition: "h_v(0) = v(0)"  # 观测器初值取初始速度
 
   # 位置滑模向量和控制律，论文式 (8)-(9)：
   #   z_p = p̃ - β_p
@@ -89,19 +108,22 @@ position:
     lambda_diagonal: [3.0, 3.0, 3.0]  # Λ_p = diag(3, 3, 3)
     lambda_reported_unit: "s^-1"
 
+# -----------------------------------------------------------------------------
+# 姿态环（内环）参数
+# -----------------------------------------------------------------------------
 attitude:
   # 姿态性能包络 ρ_q(t)：
   #   ρ_q(t) = (ρ_q,0 - ρ_q,∞) exp(-l_q t) + ρ_q,∞
   # 包络约束的是姿态误差四元数的向量部分：|q̃_v,i(t)| < ρ_q,i(t)。
   performance_envelope:
-    rho_0: [0.4, 0.4, 0.4]            # ρ_q,0
-    rho_inf: [0.06, 0.06, 0.06]       # ρ_q,∞
-    l_s_inv: 1.0                      # l_q
+    rho_0: [0.4, 0.4, 0.4]            # ρ_q,0：初始包络半宽
+    rho_inf: [0.06, 0.06, 0.06]       # ρ_q,∞：稳态包络半宽
+    l_s_inv: 1.0                      # l_q：包络指数收敛率 [s^-1]
 
   # 姿态预设误差轨迹 β_q(t)，形式同论文式 (5)：
   #   β_q(0) = q̃_v(0),  b_q = l_q q̃_v(0) + q̃_v_dot(0)
   preset_error_trajectory:
-    c: [5.0, 5.0, 5.0]                # c_q
+    c: [5.0, 5.0, 5.0]                # c_q：预设轨迹整形参数
     unit: "s^-1"
     paper_reported_unit: "not stated"
 
@@ -110,9 +132,9 @@ attitude:
   #   e_ω,i = ω_i - h_ω,i
   #   Δ̂_ω,i = α_ω,i g(e_ω,i)/ε_ω,i
   eso:
-    alpha_s_inv: [1.0, 1.0, 1.0]      # α_ω
-    epsilon: [0.25, 0.25, 0.25]       # ε_ω
-    initial_condition: "h_omega(0) = omega(0)"
+    alpha_s_inv: [1.0, 1.0, 1.0]      # α_ω：ESO 增益 [s^-1]
+    epsilon: [0.25, 0.25, 0.25]       # ε_ω：ESO 时间缩放因子
+    initial_condition: "h_omega(0) = omega(0)"  # 观测器初值取初始角速度
 
   # 姿态滑模向量和控制律，论文式 (19)-(21)：
   #   z_q = q̃_v - β_q
@@ -121,60 +143,68 @@ attitude:
   # 量纲分析表明 K_q、Λ_q 均应为 s^-1；论文第 7 页印成 s^-2。
   control:
     k_diagonal: [12.0, 12.0, 10.0]    # K_q = diag(12, 12, 10)
-    k_unit: "s^-1"
-    k_paper_reported_unit: "s^-2"
+    k_unit: "s^-1"                    # 实现采用的单位（经勘误）
+    k_paper_reported_unit: "s^-2"     # 论文印刷单位（错误）
     lambda_diagonal: [14.0, 14.0, 10.0]  # Λ_q = diag(14, 14, 10)
-    lambda_unit: "s^-1"
-    lambda_paper_reported_unit: "s^-2"
+    lambda_unit: "s^-1"               # 实现采用的单位（经勘误）
+    lambda_paper_reported_unit: "s^-2"   # 论文印刷单位（错误）
 
+# -----------------------------------------------------------------------------
+# 工程离散/实现策略：论文未规定，由 M1 阶段冻结的工程约定给出。
+# -----------------------------------------------------------------------------
 implementation_policy:
-  integration_method: "rk4"
-  timestep_source: "PX4 timestamp_sample; never ROS wall time"
-  desired_attitude_derivative: "quaternion logarithm difference with configurable low-pass filter"
-  nonfinite_behavior: "invalidate the sample and revoke output permission"
-  singularity_behavior: "reject degenerate thrust direction or non-invertible Q"
+  integration_method: "rk4"           # 连续公式用四阶 Runge-Kutta 离散
+  timestep_source: "PX4 timestamp_sample; never ROS wall time"  # 时间步取 PX4 采样时间戳，禁用 ROS 墙钟
+  desired_attitude_derivative: "quaternion logarithm difference with configurable low-pass filter"  # 期望姿态导数：四元数对数差分 + 可配置低通
+  nonfinite_behavior: "invalidate the sample and revoke output permission"  # 出现 NaN/Inf：丢弃样本并撤销输出许可
+  singularity_behavior: "reject degenerate thrust direction or non-invertible Q"  # 奇异：拒绝退化推力方向或不可逆 Q
 
+# -----------------------------------------------------------------------------
+# 验证事实：论文未报告的内容（missing）与论文勘误（errata）分开记录。
+# -----------------------------------------------------------------------------
 verification:
   # 以下是论文未报告的事实，不与可判定的印刷错误混在一起。
+  # 每一项给出受影响公式、临时值、来源、替换条件与失效后果。
   missing:
-    inertia_matrix:
-      affected_equations: [13, 14, 17, 18, 21]
-      current_temporary_value: "m2_fixture diagonal matrix only"
-      source: "synthetic dimensional fixture; not a paper or hardware value"
-      replacement_condition: "replace with measured quadrotor body inertia before HIL or hardware control"
-      failure_consequence: "blocks torque magnitude and saturation claims, not structural tracking checks"
-      paper_status: "permanently_missing"
-    control_period:
+    inertia_matrix:                   # 机体转动惯量：论文永久缺失
+      affected_equations: [13, 14, 17, 18, 21]  # 受影响的公式编号
+      current_temporary_value: "m2_fixture diagonal matrix only"  # 当前临时值：仅 M2 夹具对角阵
+      source: "synthetic dimensional fixture; not a paper or hardware value"  # 合成值，非论文/硬件数据
+      replacement_condition: "replace with measured quadrotor body inertia before HIL or hardware control"  # HIL/硬件前必须换实测值
+      failure_consequence: "blocks torque magnitude and saturation claims, not structural tracking checks"  # 阻塞力矩/饱和结论，不影响结构性跟踪检查
+      paper_status: "permanently_missing"  # 论文永久缺失，不会再有官方值
+    control_period:                   # 控制周期：论文只报告通信速率
       affected_equations: [3, 7, 14]
-      current_temporary_value: "0.01 s with RK4 in m2_fixture"
-      source: "paper experimental communication rate; controller period itself is not reported"
-      replacement_condition: "replace when author timing or measured onboard timing is available"
-      failure_consequence: "blocks claims about paper timing fidelity and real-time margin"
-    saturation_and_derivative_policy:
+      current_temporary_value: "0.01 s with RK4 in m2_fixture"  # 当前临时值：0.01 s + RK4
+      source: "paper experimental communication rate; controller period itself is not reported"  # 来源：100 Hz 通信速率，非控制器周期
+      replacement_condition: "replace when author timing or measured onboard timing is available"  # 获得时序数据后替换
+      failure_consequence: "blocks claims about paper timing fidelity and real-time margin"  # 阻塞论文时序保真度/实时余量结论
+    saturation_and_derivative_policy: # 饱和限幅与期望姿态导数策略：论文未规定
       affected_equations: [9, 15, 16, 17, 18, 21]
-      current_temporary_value: "offline reference saturation disabled; quaternion-log difference at 20 Hz cutoff"
-      source: "M1 engineering policy"
-      replacement_condition: "replace limits after allocation tests and update if author data becomes available"
-      failure_consequence: "active modes remain prohibited outside explicitly verified SITL"
+      current_temporary_value: "offline reference saturation disabled; quaternion-log difference at 20 Hz cutoff"  # 参考饱和关闭；20 Hz 低通
+      source: "M1 engineering policy"  # 来源：M1 工程策略
+      replacement_condition: "replace limits after allocation tests and update if author data becomes available"  # M6 前用分配测试定限幅
+      failure_consequence: "active modes remain prohibited outside explicitly verified SITL"  # 未验证 SITL 之外禁止主动模式
 
+  # 论文勘误：论文原印刷内容、判定依据与实现采用值。
   errata:
-    attitude_gain_units:
-      paper_original: "K_q and Lambda_q are printed as s^-2 in Section IV"
-      decision_basis: "s_q = z_q_dot + Lambda_q z_q and s_q_dot = -K_q s_q + 0.5 Q Delta_tilde_omega"
-      implementation_value: "K_q and Lambda_q use s^-1"
-    figure_2_position_control:
-      paper_original: "Fig. 2 uses m_M, p_d_dot and -K_p s_p; numbered equation (9) uses m_R, p_d_ddot and +K_p s_p"
-      decision_basis: "substitution of equation (9) into (8) gives s_p_dot = -K_p s_p + Delta_tilde_v; the figure sign gives positive feedback"
-      implementation_value: "numbered equation (9): m_R, p_d_ddot and +K_p s_p"
-    theorem_2_denominator:
-      paper_original: "Theorem 2 prints epsilon_q,0,i in the denominator"
-      decision_basis: "the attitude proof and the position-loop symmetric condition use rho_q,0,i - abs(q_tilde_v,i(0))"
+    attitude_gain_units:              # 姿态增益单位：论文印 s^-2，量纲应为 s^-1
+      paper_original: "K_q and Lambda_q are printed as s^-2 in Section IV"  # 论文原文（第 IV 节）
+      decision_basis: "s_q = z_q_dot + Lambda_q z_q and s_q_dot = -K_q s_q + 0.5 Q Delta_tilde_omega"  # 量纲分析依据
+      implementation_value: "K_q and Lambda_q use s^-1"  # 实现采用 s^-1
+    figure_2_position_control:        # 图 2 与式 (9) 不一致：采用编号公式
+      paper_original: "Fig. 2 uses m_M, p_d_dot and -K_p s_p; numbered equation (9) uses m_R, p_d_ddot and +K_p s_p"  # 图 2 用 m_M、p_d_dot、-K_p s_p
+      decision_basis: "substitution of equation (9) into (8) gives s_p_dot = -K_p s_p + Delta_tilde_v; the figure sign gives positive feedback"  # 图 2 符号会导致正反馈
+      implementation_value: "numbered equation (9): m_R, p_d_ddot and +K_p s_p"  # 采用式 (9)：m_R、p_d_ddot、+K_p s_p
+    theorem_2_denominator:            # 定理 2 分母印刷错误
+      paper_original: "Theorem 2 prints epsilon_q,0,i in the denominator"  # 论文把 ε_q,0,i 放在分母
+      decision_basis: "the attitude proof and the position-loop symmetric condition use rho_q,0,i - abs(q_tilde_v,i(0))"  # 证明中实际使用 ρ_q,0,i - |q̃_v,i(0)|
       implementation_value: "rho_q,0,i - abs(q_tilde_v,i(0))"
-    theorem_2_state_name:
-      paper_original: "the proof writes s_p_dot for the attitude closed loop"
-      decision_basis: "equations (19)-(22) and all subsequent terms are the attitude variable s_q"
+    theorem_2_state_name:             # 定理 2 证明中状态名误写
+      paper_original: "the proof writes s_p_dot for the attitude closed loop"  # 证明把姿态闭环写成 ṡ_p
+      decision_basis: "equations (19)-(22) and all subsequent terms are the attitude variable s_q"  # 式 (19)-(22) 及后续均为姿态变量 s_q
       implementation_value: "s_q_dot"
-    attitude_epsilon_name:
-      paper_original: "Section IV names the reported attitude ESO vector epsilon_q"
-      decision_basis: "equation (14) defines the observer parameter as epsilon_omega"
+    attitude_epsilon_name:            # 姿态 ESO 参数名前后不一致
+      paper_original: "Section IV names the reported attitude ESO vector epsilon_q"  # 第 IV 节称 ε_q
+      decision_basis: "equation (14) defines the observer parameter as epsilon_omega"  # 式 (14) 定义为 ε_ω
       implementation_value: "epsilon_omega"

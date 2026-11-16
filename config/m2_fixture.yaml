@@ -1,35 +1,79 @@
+# =============================================================================
+# M2 阶段 pregme_control 节点运行时参数（ROS 2 参数文件）
+# -----------------------------------------------------------------------------
+# 角色：给节点实际加载的数值；与 config/m2_fixture_metadata.yaml 成对使用，
+#       后者记录每个值的来源、可信度与替换条件。
+# 校验：src/pregme_control/test/config_contract.py 会把本文件与元数据一起做
+#       规范化哈希，校验 parameter_set_sha256 与 watermark 是否一致/过期。
+# 定位：这是一套「影子模式 + 控制输出关闭 + 声明含占位参数」的仿真夹具，
+#       仅用于 M2 的观测/符号级验证，不用于硬件控制。
+# =============================================================================
+
 pregme_control:
   ros__parameters:
+    # 运行模式，对应 pregme_core::Mode 枚举：
+    #   0=Native（纯 PX4 原生）、1=Shadow（影子观测）、
+    #   2=BoundedCompensation（有界补偿）、3=FullControl（全控制）
+    # 此处为 1，即只观测/对比，不接管控制。
     mode: 1
+    # 控制输出总开关：false 表示绝不向 PX4 写推力/力矩指令。
     enable_control_output: false
+    # 状态消息（PregmeStatus）发布频率 [Hz]，同时决定定时器周期 1/50 s。
     status_rate_hz: 50.0
+    # 状态类输入（位置/姿态/角速度等）的失效超时 [ms]，超时置对应故障位。
     state_timeout_ms: 200
+    # 控制分配器状态（control_allocator_status）超时 [ms]。
     allocator_timeout_ms: 250
+    # 是否允许在 SITL 中使用占位参数；保持 false，即占位参数不足以放行
+    # 主动控制模式（仅有占位值时主动模式会置 FaultPlaceholderParameters）。
     allow_placeholder_in_sitl: false
+    # 仿真时钟（use_sim_time）多久未更新视为丢失 [ms]。
     simulation_clock_timeout_ms: 200
+    # 仿真时间与系统时间允许的偏差容差 [ms]。
     simulation_time_tolerance_ms: 100
+
+    # -------------------------------------------------------------------------
+    # 夹具标识与物理/时序参数
+    # 标注「占位」的字段在进入 HIL/硬件或被引用为结论前必须替换（见元数据文件）。
+    # -------------------------------------------------------------------------
     fixture:
+      # 是否声明本夹具含占位参数；契约要求 M2 夹具必须为 true。
       has_placeholder: true
+      # 夹具唯一标识，与元数据文件的 fixture_id 一致。
       id: m2_fixture_v1
+      # 参数集规范化 SHA-256，与元数据文件中的值必须完全相同。
       parameter_set_sha256: 072d67e9ccfbfb78abbf7fed9625f4490b8a76a259a041abe97d864a17036764
+      # 结果水印：FIXTURE:<id>:<sha256 前 12 位>，实验输出应带上此标记。
       watermark: FIXTURE:m2_fixture_v1:072d67e9ccfb
+      # 机体（四旋翼平台）质量 [kg] —— 论文报告值。
       body_mass_kg: 5.40
+      # 机械臂质量 [kg] —— 论文报告值。
       arm_mass_kg: 2.32
+      # 轴距 [m] —— 论文报告值，用于约束惯量量级。
       wheelbase_m: 0.90
+      # 机体转动惯量 [kg*m^2]（机体系 FRD 对角分量）—— 合成占位值，非实测。
       inertia_xx_kg_m2: 0.48
       inertia_yy_kg_m2: 0.48
       inertia_zz_kg_m2: 0.70
+      # 期望位置/姿态输入周期 [s]，即按 100 Hz 接收参考——占位值。
       expected_position_period_s: 0.01
       expected_attitude_period_s: 0.01
+      # 允许的输入周期上下界 [s]：0.005~0.02，即 200 Hz~50 Hz，超出视为异常。
       minimum_period_s: 0.005
       maximum_period_s: 0.02
+      # 期望姿态导数低通截止频率 [Hz] —— M1 工程策略占位值。
       desired_attitude_derivative_cutoff_hz: 20.0
+
+    # -------------------------------------------------------------------------
+    # PX4 uORB 桥接话题契约（固定，不可随意漂移）
+    # 契约测试要求以下 8 项与 onboard_default.yaml 完全一致。
+    # -------------------------------------------------------------------------
     topics:
-      local_position: /fmu/out/vehicle_local_position
-      attitude: /fmu/out/vehicle_attitude
-      angular_velocity: /fmu/out/vehicle_angular_velocity
-      vehicle_status: /fmu/out/vehicle_status_v1
-      allocator_status: /fmu/out/control_allocator_status
-      reference: /fmu/out/vehicle_local_position_setpoint
-      native_thrust: /fmu/out/vehicle_thrust_setpoint
-      native_torque: /fmu/out/vehicle_torque_setpoint
+      local_position: /fmu/out/vehicle_local_position              # 局部位置估计
+      attitude: /fmu/out/vehicle_attitude                          # 姿态四元数
+      angular_velocity: /fmu/out/vehicle_angular_velocity          # 机体角速度
+      vehicle_status: /fmu/out/vehicle_status_v1                   # 飞行器状态（解锁/Offboard/失效保护）
+      allocator_status: /fmu/out/control_allocator_status          # 控制分配器状态
+      reference: /fmu/out/vehicle_local_position_setpoint          # 位置参考设定点
+      native_thrust: /fmu/out/vehicle_thrust_setpoint              # PX4 原生推力设定点
+      native_torque: /fmu/out/vehicle_torque_setpoint              # PX4 原生力矩设定点

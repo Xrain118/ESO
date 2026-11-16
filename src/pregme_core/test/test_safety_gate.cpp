@@ -1,3 +1,10 @@
+// =============================================================================
+// SafetyGate / TimestampTracker / SimulationClockGuard 单元测试
+// -----------------------------------------------------------------------------
+// 目标：用最小的可控输入覆盖安全门的每个放行条件和故障分支，锁定 M1 冻结的
+//       接口行为。所有用例都不依赖 ROS 运行时。
+// =============================================================================
+
 #include <gtest/gtest.h>
 
 #include "pregme_core/safety_gate.hpp"
@@ -7,6 +14,8 @@
 namespace
 {
 
+// 构造一份「全部健康」的输入基线：所有通道有效、未超时、已解锁且 Offboard。
+// 各用例在此基础上只改动需要验证的字段，保持测试意图单一。
 pregme::SafetyInputs valid_inputs()
 {
   pregme::SafetyInputs inputs{};
@@ -33,6 +42,7 @@ pregme::SafetyInputs valid_inputs()
   return inputs;
 }
 
+// 即使输入完全健康、算法就绪、输出开关打开，Native/Shadow 也不得写控制。
 TEST(SafetyGate, NativeAndShadowNeverPublishControl)
 {
   pregme::SafetyGate gate;
@@ -40,6 +50,7 @@ TEST(SafetyGate, NativeAndShadowNeverPublishControl)
   EXPECT_FALSE(gate.evaluate(1, true, true, valid_inputs()).publish_control);
 }
 
+// 主动模式的两个硬门：输出开关与核心算法就绪，任一关闭都不得发布控制。
 TEST(SafetyGate, ActiveModesRequireBothHardGates)
 {
   pregme::SafetyGate gate;
@@ -48,6 +59,7 @@ TEST(SafetyGate, ActiveModesRequireBothHardGates)
   EXPECT_TRUE(gate.evaluate(2, true, true, valid_inputs()).publish_control);
 }
 
+// 输入超时和估计器复位都应阻止主动控制，并各自置对应故障位。
 TEST(SafetyGate, StaleStateAndResetForceNative)
 {
   pregme::SafetyGate gate;
@@ -64,6 +76,7 @@ TEST(SafetyGate, StaleStateAndResetForceNative)
   EXPECT_NE(reset_decision.fault_flags & pregme::FaultEstimatorReset, 0U);
 }
 
+// 越界模式必须被拒绝，并回落到 Native。
 TEST(SafetyGate, InvalidModeIsRejected)
 {
   pregme::SafetyGate gate;
@@ -72,6 +85,7 @@ TEST(SafetyGate, InvalidModeIsRejected)
   EXPECT_NE(decision.fault_flags & pregme::FaultInvalidMode, 0U);
 }
 
+// Shadow 模式需要参考轨迹和原生推力/力矩镜像；缺失时三项故障都要置位。
 TEST(SafetyGate, ShadowRequiresReferenceAndNativeControlObservations)
 {
   pregme::SafetyGate gate;
@@ -87,6 +101,8 @@ TEST(SafetyGate, ShadowRequiresReferenceAndNativeControlObservations)
   EXPECT_FALSE(decision.publish_control);
 }
 
+// 占位参数进入主动控制的三级放行：默认禁止 -> 需 SITL 显式许可 ->
+// 还需仿真时钟对齐；三者逐级满足后才允许发布控制。
 TEST(SafetyGate, PlaceholderRequiresVerifiedSimulationContext)
 {
   pregme::SafetyGate gate;
@@ -104,6 +120,7 @@ TEST(SafetyGate, PlaceholderRequiresVerifiedSimulationContext)
   EXPECT_TRUE(decision.publish_control);
 }
 
+// 时间戳跟踪器的状态迁移：首帧 -> 重复 -> 回退（锁存）-> 恢复 -> 归零（锁存）。
 TEST(TimestampTracker, DuplicateRegressionAndRecoveryAreExplicit)
 {
   pregme::TimestampTracker tracker;
@@ -117,6 +134,8 @@ TEST(TimestampTracker, DuplicateRegressionAndRecoveryAreExplicit)
   EXPECT_TRUE(tracker.fault_latched());
 }
 
+// 仿真时钟守卫必须同时满足：use_sim_time、显式许可、偏移稳定、观察新鲜。
+// 用例依次关闭每个条件，验证 valid() 都会失败。
 TEST(SimulationClockGuard, RequiresStableOffsetFreshnessAndBothPermissions)
 {
   pregme::SimulationClockGuard guard;

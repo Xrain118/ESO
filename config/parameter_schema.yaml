@@ -1,15 +1,35 @@
-schema_version: 2
+# =============================================================================
+# 参数模式（parameter_schema.yaml）
+# -----------------------------------------------------------------------------
+# 用途：声明 pregme_control 节点运行参数的合法类型、单位、取值范围与默认值，
+#       作为参数校验/文档生成的单一来源（onboard_default.yaml、m2_fixture.yaml
+#       中的取值都必须落在本模式允许的范围内）。
+# 约定：
+#   type     —— 参数数据类型（integer/boolean/number/string/number_array）
+#   allowed  —— 枚举取值；unit —— 物理单位
+#   minimum/maximum/exclusive_minimum —— 闭/开区间边界
+#   default  —— 默认值；mutable —— 运行期是否允许动态修改
+# 校验脚本：src/pregme_control/test/config_contract.py（契约检查入口）。
+# =============================================================================
+schema_version: 2                     # 模式格式版本
 
+# -----------------------------------------------------------------------------
+# 运行时参数（ros__parameters 顶层）
+# -----------------------------------------------------------------------------
 runtime:
+  # 运行模式：0=Native、1=Shadow、2=BoundedCompensation、3=FullControl
+  # 可运行期切换；枚举范围由 allowed 限定。
   mode:
     type: integer
     allowed: [0, 1, 2, 3]
-    default: 0
+    default: 0                        # 默认纯 PX4 原生模式
     mutable: true
+  # 控制输出总开关；可在运行期启用/禁用。
   enable_control_output:
     type: boolean
-    default: false
+    default: false                    # 默认关闭，安全优先
     mutable: true
+  # 状态消息发布频率 [Hz]，1~100 Hz，启动后不可改。
   status_rate_hz:
     type: number
     unit: Hz
@@ -17,6 +37,7 @@ runtime:
     maximum: 100.0
     default: 50.0
     mutable: false
+  # 状态类输入失效超时 [ms]，20~1000 ms，启动后不可改。
   state_timeout_ms:
     type: integer
     unit: ms
@@ -24,6 +45,7 @@ runtime:
     maximum: 1000
     default: 200
     mutable: false
+  # 控制分配器状态超时 [ms]，20~1000 ms，启动后不可改。
   allocator_timeout_ms:
     type: integer
     unit: ms
@@ -31,10 +53,12 @@ runtime:
     maximum: 1000
     default: 250
     mutable: false
+  # 是否允许 SITL 使用占位参数；默认 false，启动后不可改。
   allow_placeholder_in_sitl:
     type: boolean
     default: false
     mutable: false
+  # 仿真时钟未更新超时 [ms]，20~1000 ms，启动后不可改。
   simulation_clock_timeout_ms:
     type: integer
     unit: ms
@@ -42,6 +66,7 @@ runtime:
     maximum: 1000
     default: 200
     mutable: false
+  # 仿真时间与系统时间允许偏差 [ms]，10~1000 ms，启动后不可改。
   simulation_time_tolerance_ms:
     type: integer
     unit: ms
@@ -50,60 +75,78 @@ runtime:
     default: 100
     mutable: false
 
+# -----------------------------------------------------------------------------
+# 夹具参数（fixture.*）：仅在夹具/仿真配置中出现，机上默认配置不应填充。
+# -----------------------------------------------------------------------------
 fixture:
+  # 是否声明本参数集含占位值；默认 false。
   has_placeholder:
     type: boolean
     default: false
+  # 夹具标识字符串；none 表示未使用夹具。
   id:
     type: string
     default: none
+  # 参数集规范化 SHA-256：64 位小写十六进制，或 none 表示未绑定。
   parameter_set_sha256:
     type: string
     format: lowercase_sha256_or_none
     default: none
+  # 结果水印：FIXTURE:<fixture id>:<sha256 前 12 位>，或 none。
   watermark:
     type: string
     format: fixture_id_and_sha256_prefix_or_none
     default: none
+  # 机体质量 [kg]，必须大于 0。
   body_mass_kg:
     type: number
     unit: kg
     exclusive_minimum: 0.0
+  # 机械臂质量 [kg]，可为 0（无机械臂时）。
   arm_mass_kg:
     type: number
     unit: kg
     minimum: 0.0
+  # 轴距 [m]，必须大于 0。
   wheelbase_m:
     type: number
     unit: m
     exclusive_minimum: 0.0
+  # 机体转动惯量对角阵 [kg*m^2]，长度 3，各分量必须大于 0。
   inertia_diagonal_kg_m2:
     type: number_array
     length: 3
     unit: kg*m^2
     exclusive_minimum: 0.0
+  # 回转半径（派生量，不单独配置）：r = sqrt(I/m)，用于校验惯量与质量、轴距量级一致。
+  # 合理范围 0.1~0.4 m。
   radius_of_gyration_m:
     derived: sqrt(inertia_diagonal_kg_m2/body_mass_kg)
     minimum: 0.1
     maximum: 0.4
+  # 采样周期 [s]，必须大于 0（对应期望的位置/姿态输入周期）。
   sample_period_s:
     type: number
     unit: s
     exclusive_minimum: 0.0
+  # 期望姿态导数低通截止频率 [Hz]，必须大于 0。
   desired_attitude_derivative_cutoff_hz:
     type: number
     unit: Hz
     exclusive_minimum: 0.0
 
+# -----------------------------------------------------------------------------
+# PX4 话题契约：固定话题集合，运行期不可改，且必须是绝对话题名。
+# -----------------------------------------------------------------------------
 topics:
-  mutable: false
-  require_absolute_name: true
-  keys:
-    - local_position
-    - attitude
-    - angular_velocity
-    - vehicle_status
-    - allocator_status
-    - reference
-    - native_thrust
-    - native_torque
+  mutable: false                      # 运行期不可修改
+  require_absolute_name: true         # 必须以 / 开头（绝对话题名）
+  keys:                               # 必须且只能包含以下 8 个键
+    - local_position                  # 局部位置估计
+    - attitude                        # 姿态四元数
+    - angular_velocity                # 机体角速度
+    - vehicle_status                  # 飞行器状态
+    - allocator_status                # 控制分配器状态
+    - reference                       # 位置参考设定点
+    - native_thrust                   # PX4 原生推力设定点
+    - native_torque                   # PX4 原生力矩设定点

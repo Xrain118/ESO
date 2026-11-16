@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""pregme_control 节点的 launch 级安全测试。
+
+在真实 ROS 2 运行时中启动节点，测试进程扮演 PX4 和地面端：
+  - 向八个 /fmu/out/* 话题注入健康输入；
+  - 监听三个 /fmu/in/* 控制话题，统计节点是否越权发布控制；
+  - 通过参数服务切换模式、尝试修改启动期参数；
+  - 断言「算法未就绪时，任何模式都必须保持输出静默」以及参数白名单生效。
+
+注意：真正让算法就绪还需要 M2/M3 的实现；这里锁死的是当前的安全边界。
+"""
 
 import time
 import unittest
@@ -24,6 +34,7 @@ from rcl_interfaces.srv import SetParameters
 
 
 def generate_test_description():
+    """启动被测节点。提高状态发布频率可缩短测试等待时间。"""
     control_node = launch_ros.actions.Node(
         package="pregme_control",
         executable="pregme_control_node",
@@ -44,9 +55,12 @@ def generate_test_description():
 class TestNodeSafety(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        """建立测试节点、输出监听器、参数客户端和八个输入发布器。"""
         rclpy.init()
         cls.node = rclpy.create_node("pregme_control_safety_test")
+        # 计数节点向三个 /fmu/in 话题发布控制消息的次数；期望始终为 0。
         cls.output_counts = {"mode": 0, "thrust": 0, "torque": 0}
+        # 缓存最新一条 PregmeStatus，供断言读取。
         cls.latest_status = None
         cls.subscriptions = [
             cls.node.create_subscription(
@@ -74,9 +88,11 @@ class TestNodeSafety(unittest.TestCase):
                 10,
             ),
         ]
+        # 参数客户端用于运行期切换模式和验证启动期参数会被拒绝。
         cls.parameter_client = cls.node.create_client(
             SetParameters, "/pregme_control/set_parameters"
         )
+        # 模拟 PX4 的八个输入话题；键名与节点参数中的通道名对应。
         cls.input_publishers = {
             "local": cls.node.create_publisher(
                 VehicleLocalPosition, "/fmu/out/vehicle_local_position", 10
@@ -113,6 +129,7 @@ class TestNodeSafety(unittest.TestCase):
                 10,
             ),
         }
+        # 单调递增的采样时间戳，满足节点的时间戳单调性要求。
         cls.sample_timestamp_us = 1_000_000
 
     @classmethod
@@ -120,16 +137,22 @@ class TestNodeSafety(unittest.TestCase):
         cls.node.destroy_node()
         rclpy.shutdown()
 
+    # -------------------------------------------------------------------------
+    # 回调与辅助函数
+    # -------------------------------------------------------------------------
     @classmethod
     def _increment(cls, output_name):
+        """输出话题回调：累计节点发布控制消息的次数。"""
         cls.output_counts[output_name] += 1
 
     @classmethod
     def _store_status(cls, message):
+        """状态话题回调：保存最新状态消息。"""
         cls.latest_status = message
 
     @classmethod
     def _spin_until(cls, predicate, timeout_s=5.0):
+        """以小步长 spin，直到谓词为真或超时。"""
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
             rclpy.spin_once(cls.node, timeout_sec=0.05)
@@ -139,6 +162,12 @@ class TestNodeSafety(unittest.TestCase):
 
     @classmethod
     def _publish_valid_inputs(cls):
+        """注入一组全部健康、时间戳统一递增的 PX4 输入。
+
+        每个字段都按节点的 valid 判据填写：位置/速度四个有效位为真、
+        四元数为单位四元数、已解锁且 Offboard、分配器已达成且无电机故障、
+        参考轨迹有限、原生推力/力矩有限。
+        """
         cls.sample_timestamp_us += 10_000
         timestamp = cls.sample_timestamp_us
 
@@ -203,6 +232,7 @@ class TestNodeSafety(unittest.TestCase):
 
     @classmethod
     def _spin_with_inputs(cls, duration_s):
+        """在指定时长内持续注入健康输入，避免节点超时进入故障状态。"""
         deadline = time.monotonic() + duration_s
         while time.monotonic() < deadline:
             cls._publish_valid_inputs()
@@ -210,6 +240,7 @@ class TestNodeSafety(unittest.TestCase):
 
     @classmethod
     def _set_mode_and_enable(cls, mode):
+        """一次性设置 mode 并打开 enable_control_output，返回服务响应。"""
         request = SetParameters.Request()
         request.parameters = [
             Parameter(
@@ -232,6 +263,11 @@ class TestNodeSafety(unittest.TestCase):
         return future.result()
 
     def test_all_modes_remain_output_silent_without_algorithm(self):
+        """核心算法未就绪时，模式 0~3 都不能向 PX4 发布任何控制指令。
+
+        即使健康输入齐全、输出开关已打开、模式被切到 3，节点也必须保持
+        三个 /fmu/in 话题零发布；同时各通道有效位应全部置位（255）。
+        """
         self.assertTrue(
             self._spin_until(lambda: self.latest_status is not None),
             "未收到节点状态主题",
@@ -262,6 +298,7 @@ class TestNodeSafety(unittest.TestCase):
         )
 
     def test_startup_only_parameter_is_rejected(self):
+        """运行期修改启动期参数（如 state_timeout_ms）必须被参数回调拒绝。"""
         self.assertTrue(self.parameter_client.wait_for_service(timeout_sec=3.0))
         request = SetParameters.Request()
         request.parameters = [
