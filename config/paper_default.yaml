@@ -28,10 +28,13 @@ paper:
     - "Huazi Cao"
     - "Shiyu Zhao"
   source_file: "摇水瓶+推车.pdf"
+  source_sha256: "790069c4f56680fa0b937d67854beaff2057f74de847f159d3a825d2b63aa4a9"
   reported_same_parameters_for_simulation_and_experiments: true
-  # Keep false until the missing implementation details and reported-unit
-  # inconsistency listed under verification are resolved.
-  formulas_frozen: false
+  # 表示论文已报告的包络、预设轨迹、ESO 与控制增益参数齐全；不表示论文给出了惯量和离散策略。
+  params_complete: true
+  # M1 已冻结连续公式、单位、坐标、初值、勘误判定和工程离散接口。
+  # 数学执行核心尚未实现，algorithm_ready() 仍必须为 false。
+  formulas_frozen: true
 
 # 论文数值仿真和实机实验使用的标称平台参数。
 # m_B 是四旋翼基体质量，m_R 是机械臂质量；这些不是 Dragonfly 实机参数。
@@ -64,7 +67,8 @@ position:
   #   β_p(0) = p̃(0),  b_p = l_p p̃(0) + p̃_dot(0)
   preset_error_trajectory:
     c: [5.0, 5.0, 5.0]                # c_p
-    reported_unit: "not stated"
+    unit: "s^-1"                      # exp(-c_p t) 要求 c_p 为时间倒数
+    paper_reported_unit: "not stated"
 
   # 位置变增益 ESO，论文式 (7)：
   #   ḣ_v,i = α_v,i g(e_v,i)/ε_v,i + u_v,i
@@ -98,7 +102,8 @@ attitude:
   #   β_q(0) = q̃_v(0),  b_q = l_q q̃_v(0) + q̃_v_dot(0)
   preset_error_trajectory:
     c: [5.0, 5.0, 5.0]                # c_q
-    reported_unit: "not stated"
+    unit: "s^-1"
+    paper_reported_unit: "not stated"
 
   # 姿态变增益 ESO，论文式 (14)：
   #   ḣ_ω,i = α_ω,i g(e_ω,i)/ε_ω,i + u_ω,i
@@ -122,9 +127,54 @@ attitude:
     lambda_unit: "s^-1"
     lambda_paper_reported_unit: "s^-2"
 
+implementation_policy:
+  integration_method: "rk4"
+  timestep_source: "PX4 timestamp_sample; never ROS wall time"
+  desired_attitude_derivative: "quaternion logarithm difference with configurable low-pass filter"
+  nonfinite_behavior: "invalidate the sample and revoke output permission"
+  singularity_behavior: "reject degenerate thrust direction or non-invertible Q"
+
 verification:
-  unresolved:
-    - "The quadcopter inertia matrix I is used by the control law but is not numerically reported."
-    - "The controller/ESO execution period and continuous-to-discrete method are not reported."
-    - "Control saturation, derivative generation, and numerical protection details are not reported."
-    - "The paper prints both K_q and Lambda_q in s^-2, but equations (19)-(22) require s^-1; the implementation unit is corrected to s^-1 pending an author correction."
+  # 以下是论文未报告的事实，不与可判定的印刷错误混在一起。
+  missing:
+    inertia_matrix:
+      affected_equations: [13, 14, 17, 18, 21]
+      current_temporary_value: "m2_fixture diagonal matrix only"
+      source: "synthetic dimensional fixture; not a paper or hardware value"
+      replacement_condition: "replace with measured Dragonfly body inertia before HIL or hardware control"
+      failure_consequence: "blocks torque magnitude and saturation claims, not structural tracking checks"
+      paper_status: "permanently_missing"
+    control_period:
+      affected_equations: [3, 7, 14]
+      current_temporary_value: "0.01 s with RK4 in m2_fixture"
+      source: "paper experimental communication rate; controller period itself is not reported"
+      replacement_condition: "replace when author timing or measured onboard timing is available"
+      failure_consequence: "blocks claims about paper timing fidelity and real-time margin"
+    saturation_and_derivative_policy:
+      affected_equations: [9, 15, 16, 17, 18, 21]
+      current_temporary_value: "offline reference saturation disabled; quaternion-log difference at 20 Hz cutoff"
+      source: "M1 engineering policy"
+      replacement_condition: "replace limits after allocation tests and update if author data becomes available"
+      failure_consequence: "active modes remain prohibited outside explicitly verified SITL"
+
+  errata:
+    attitude_gain_units:
+      paper_original: "K_q and Lambda_q are printed as s^-2 in Section IV"
+      decision_basis: "s_q = z_q_dot + Lambda_q z_q and s_q_dot = -K_q s_q + 0.5 Q Delta_tilde_omega"
+      implementation_value: "K_q and Lambda_q use s^-1"
+    figure_2_position_control:
+      paper_original: "Fig. 2 uses m_M, p_d_dot and -K_p s_p; numbered equation (9) uses m_R, p_d_ddot and +K_p s_p"
+      decision_basis: "substitution of equation (9) into (8) gives s_p_dot = -K_p s_p + Delta_tilde_v; the figure sign gives positive feedback"
+      implementation_value: "numbered equation (9): m_R, p_d_ddot and +K_p s_p"
+    theorem_2_denominator:
+      paper_original: "Theorem 2 prints epsilon_q,0,i in the denominator"
+      decision_basis: "the attitude proof and the position-loop symmetric condition use rho_q,0,i - abs(q_tilde_v,i(0))"
+      implementation_value: "rho_q,0,i - abs(q_tilde_v,i(0))"
+    theorem_2_state_name:
+      paper_original: "the proof writes s_p_dot for the attitude closed loop"
+      decision_basis: "equations (19)-(22) and all subsequent terms are the attitude variable s_q"
+      implementation_value: "s_q_dot"
+    attitude_epsilon_name:
+      paper_original: "Section IV names the reported attitude ESO vector epsilon_q"
+      decision_basis: "equation (14) defines the observer parameter as epsilon_omega"
+      implementation_value: "epsilon_omega"

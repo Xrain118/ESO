@@ -7,10 +7,15 @@
 | `/fmu/out/vehicle_local_position` | NED 位置、速度、加速度 | 有效位、样本时间、位置和速度重置计数 |
 | `/fmu/out/vehicle_attitude` | FRD 到 NED 的 Hamilton 四元数 `wxyz` | 有限、归一化、样本时间、重置计数 |
 | `/fmu/out/vehicle_angular_velocity` | FRD 机体系角速度 | 有限、样本时间和陈旧判定 |
-| `/fmu/out/vehicle_status` | 解锁和导航状态 | 模式许可与降级依据 |
-| `/fmu/out/control_allocator_status` | 分配残差和饱和 | 输出许可与持续异常计数 |
+| `/fmu/out/vehicle_status_v1` | 解锁、导航状态和 failsafe | 模式许可、时间纪元与降级依据 |
+| `/fmu/out/control_allocator_status` | 分配达成、残差和故障掩码 | 输出许可与异常记录 |
+| `/fmu/out/vehicle_local_position_setpoint` | PX4 当前 NED 参考 | 影子参考与后续控制接口 |
+| `/fmu/out/vehicle_thrust_setpoint` | PX4 原生归一化 FRD 推力 | 位置 ESO 已知输入与影子对照 |
+| `/fmu/out/vehicle_torque_setpoint` | PX4 原生归一化 FRD 力矩 | 姿态 ESO 已知输入与影子对照 |
 
 PX4 v1.16.2 的 DDS 配置必须显式发布 `vehicle_angular_velocity`。ESO 不使用 `/dragonfly/truth` 或任何 groundtruth 主题。
+
+uORB 名 `vehicle_status` 的消息版本为 1，因此 ROS 2 传输主题带 `_v1` 后缀。逐流时间戳、重复/倒退、PX4 重启和 EKF reset 的完整语义见 [uORB/DDS 冻结契约](uorb_contract.md)。
 
 ## 输出
 
@@ -33,3 +38,5 @@ PX4 v1.16.2 的 DDS 配置必须显式发布 `vehicle_angular_velocity`。ESO �
 | 3 完整控制 | 经许可后发布完整 PreGME 合力和力矩 | ESO 控制律，PX4 分配 |
 
 模式 2 和 3 只有在数学核心完成、输出硬开关开启、所有输入新鲜有效且 PX4 仲裁契约通过验证后才允许进入。任一条件失败都立即停止 ESO 控制输出，由 PX4 执行预配置的原生回退。
+
+含占位参数时默认拒绝模式 2/3；未来只有显式 SITL 许可和仿真时钟证明同时成立时才允许仿真例外，HIL 与实机不允许例外。

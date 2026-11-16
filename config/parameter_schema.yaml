@@ -1,24 +1,109 @@
-schema_version: 1
+schema_version: 2
+
 runtime:
   mode:
     type: integer
     allowed: [0, 1, 2, 3]
     default: 0
+    mutable: true
   enable_control_output:
     type: boolean
     default: false
+    mutable: true
   status_rate_hz:
     type: number
+    unit: Hz
     minimum: 1.0
     maximum: 100.0
     default: 50.0
+    mutable: false
   state_timeout_ms:
     type: integer
+    unit: ms
     minimum: 20
     maximum: 1000
     default: 200
+    mutable: false
   allocator_timeout_ms:
     type: integer
+    unit: ms
     minimum: 20
     maximum: 1000
     default: 250
+    mutable: false
+  allow_placeholder_in_sitl:
+    type: boolean
+    default: false
+    mutable: false
+  simulation_clock_timeout_ms:
+    type: integer
+    unit: ms
+    minimum: 20
+    maximum: 1000
+    default: 200
+    mutable: false
+  simulation_time_tolerance_ms:
+    type: integer
+    unit: ms
+    minimum: 10
+    maximum: 1000
+    default: 100
+    mutable: false
+
+fixture:
+  has_placeholder:
+    type: boolean
+    default: false
+  id:
+    type: string
+    default: none
+  parameter_set_sha256:
+    type: string
+    format: lowercase_sha256_or_none
+    default: none
+  watermark:
+    type: string
+    format: fixture_id_and_sha256_prefix_or_none
+    default: none
+  body_mass_kg:
+    type: number
+    unit: kg
+    exclusive_minimum: 0.0
+  arm_mass_kg:
+    type: number
+    unit: kg
+    minimum: 0.0
+  wheelbase_m:
+    type: number
+    unit: m
+    exclusive_minimum: 0.0
+  inertia_diagonal_kg_m2:
+    type: number_array
+    length: 3
+    unit: kg*m^2
+    exclusive_minimum: 0.0
+  radius_of_gyration_m:
+    derived: sqrt(inertia_diagonal_kg_m2/body_mass_kg)
+    minimum: 0.1
+    maximum: 0.4
+  sample_period_s:
+    type: number
+    unit: s
+    exclusive_minimum: 0.0
+  desired_attitude_derivative_cutoff_hz:
+    type: number
+    unit: Hz
+    exclusive_minimum: 0.0
+
+topics:
+  mutable: false
+  require_absolute_name: true
+  keys:
+    - local_position
+    - attitude
+    - angular_velocity
+    - vehicle_status
+    - allocator_status
+    - reference
+    - native_thrust
+    - native_torque
