@@ -1,8 +1,8 @@
 # ESO 机载 PreGME 控制工作区
 
-ESO 是部署在 Dragonfly 无人机机载电脑上的 ROS 2 Humble 工程。这里维护 PreGME 数学核心、PX4 ROS 2 接口、运行模式、安全降级、实机配置和离线分析工具。
+ESO 是部署在固定桨轴 X 构型四旋翼无人机机载电脑上的 ROS 2 Humble 工程。这里维护 PreGME 数学核心、PX4 ROS 2 接口、运行模式、安全降级、实机配置和离线分析工具。本分支先在欠驱动四旋翼空中机械臂平台上复现论文方法，再进入真实无人机验证。
 
-Gazebo、URDF/Xacro、PX4 SITL、仿真场景和仿真验收位于 `/home/ubuntu/Dragonfly`。ESO 不依赖 Dragonfly，也不订阅 Gazebo 真值。Dragonfly 可以在构建后加载 ESO 的安装空间，用同一个控制节点完成仿真验证。
+Gazebo、URDF/Xacro、PX4 SITL、仿真场景和仿真验收位于外部仓库 `/home/ubuntu/Dragonfly`。ESO 不依赖该仓库，也不订阅 Gazebo 真值。外部仿真仓库可以在构建后加载 ESO 的安装空间，用同一个控制节点完成仿真验证。
 
 ## 代码边界
 
@@ -16,7 +16,7 @@ Gazebo、URDF/Xacro、PX4 SITL、仿真场景和仿真验收位于 `/home/ubuntu
 | `tools` | 公式参考、黄金数据、日志分析和绘图；不参与闭环 |
 | `docs` | 架构、PX4 接口、硬件事实和推进规划 |
 
-生产控制只允许发布 PX4 合力和力矩设定值。ESO 不创建 `actuator_motors` 或 `actuator_servos` 发布者，六电机六倾转分配继续由 PX4 的 `ControlAllocationDragonfly` 完成。
+生产控制只允许发布 PX4 推力和力矩设定值。ESO 不创建 `actuator_motors` 或 `actuator_servos` 发布者；PX4 使用标准多旋翼控制分配，将机体 Z 轴总推力和三轴力矩分配到四路电机。平台不能独立产生机体系 X/Y 向力，水平运动必须通过改变姿态实现。
 
 ## 当前实现状态
 
@@ -25,7 +25,7 @@ Gazebo、URDF/Xacro、PX4 SITL、仿真场景和仿真验收位于 `/home/ubuntu
 ## 构建
 
 ```bash
-cd /home/ubuntu/ESO
+cd /home/ubuntu/ESO-simple-quadcopter
 source /opt/ros/humble/setup.bash
 source /home/ubuntu/px4_ros2_ws/install/setup.bash
 colcon build --symlink-install
@@ -36,7 +36,7 @@ colcon test-result --verbose
 ## 机载启动
 
 ```bash
-source /home/ubuntu/ESO/install/setup.bash
+source /home/ubuntu/ESO-simple-quadcopter/install/setup.bash
 ros2 launch eso_bringup onboard.launch.py
 ```
 

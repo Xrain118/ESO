@@ -23,6 +23,14 @@ PX4 v1.16.2 的 DDS 配置必须显式发布 `vehicle_angular_velocity`。ESO �
 
 禁止 ESO 发布 `/fmu/in/actuator_motors` 和 `/fmu/in/actuator_servos`。
 
+## 四旋翼分配契约
+
+- PX4 使用标准 `control_allocator` 多旋翼 effectiveness，基线参数为 `CA_AIRFRAME=0`、`CA_ROTOR_COUNT=4`、`CA_METHOD=2`。
+- 欠驱动平台只直接实现机体 Z 轴总推力与三轴力矩；`vehicle_thrust_setpoint` 的机体系 X/Y 分量不属于可独立实现的控制自由度。
+- 水平位置控制必须通过期望姿态改变总推力方向，不得把任意六维合力/力矩作为四旋翼可实现集合。
+- 四路电机的编号、位置、旋向、推力系数、反扭矩系数和饱和状态由 PX4 参数与台架测试冻结，ESO 不维护第二份执行器映射。
+- `control_allocator_status` 的分配残差和饱和状态继续参与 ESO 输出许可判断。
+
 ## 模式所有权
 
 | 模式 | ESO 行为 | 输出所有权 |
