@@ -1,6 +1,6 @@
 # M2 PreGME 公式复现报告
 
-> 状态：PR1–PR3 / T02–T04，公式基础、位置 ESO 与姿态 ESO 黄金数据
+> 状态：PR1–PR4 / T02–T05，公式基础、两路 ESO 与两路控制律黄金数据
 > 初始实现基线：`5e738e6`；PR3 基线：`1c435ab`（最终提交以 `git rev-parse HEAD` 输出为准）
 
 ## 复现目标
@@ -247,3 +247,61 @@ python3 -m pytest test/pregme -q -W error::RuntimeWarning
 
 PR3 不实现姿态误差、期望姿态、滑模或控制律，不修改 C++、ROS、PX4 接口或
 飞行输出，`pregme::algorithm_ready()` 继续保持 `false`。
+
+## PR4 位置/姿态滑模误差与控制律
+
+### 公式实现边界
+
+位置通道实现式 (8)、编号式 (9) 和式 (6) 的已知输入换算。总质量严格为
+YAML 中 `m_B+m_R=7.72 kg`，采用 `p_d_ddot` 与 `+K_p s_p`，没有采用论文
+图 2 中已判定错误的速度项和负反馈符号。
+
+姿态通道实现式 (15)–(21)：由 NED 控制力和偏航构造期望姿态，计算 Hamilton
+四元数误差、`Q/Q_dot`、姿态滑模量、非线性项 `f_q` 和 FRD 力矩。所有矩阵
+求解均使用 `numpy.linalg.solve`；输入旋转矩阵不满足 SO(3)、控制力方向退化
+或 `q0<=1e-8` 时明确失败，不返回非有限控制量。
+
+PR4 不实现期望姿态导数状态机。`omega_d` 和 `omega_d_dot` 是控制律的显式
+输入；黄金算例直接给定它们，闭环包络测试使用恒定期望姿态和零导数。这样
+既完整验证连续式 (17)–(21)，又不替论文缺失的差分滤波细节做静默选择。
+
+### 合成惯量与控制输出限制
+
+姿态力矩继续使用水印 fixture 的
+`diag(0.48,0.48,0.70) kg·m²`。它仅证明结构、符号、量纲和确定性数值结果；
+真实惯量缺失仍阻塞力矩幅值、饱和和硬件结论。PR4 输出的是论文物理量
+`T_vec [N]` 和 `tau [N·m]`，没有 PX4 归一化、控制分配、补偿限幅或飞行输出。
+
+### 黄金数据与容差
+
+黄金产物包含三组位置规范算例和三组姿态规范算例：
+
+- `position_control_v1.csv`：悬停零误差、一般三轴跟踪、扰动补偿；
+- `attitude_control_v1.csv`：单位姿态静止、单轴误差、三轴耦合运动；
+- `control_v1_manifest.json`：列、单位、坐标、参数、placeholder、源码和数据哈希。
+
+位置代数恒等式使用 `1e-14` 量级绝对容差，姿态式 (21) 独立展开使用
+`rtol=1e-13,atol=1e-14`，SO(3) 中心差分使用 `rtol=1e-8`。闭环测试使用
+精确扰动估计隔离控制律：位置以 `dt=0.002 s` 积分 12 s，姿态以
+`dt=0.001 s` 积分 8 s；两路误差始终在论文包络内且终值进入
+`rho_inf+1e-3`。这些是离线公式级验证，不是论文曲线、SITL 或实机证据。
+
+当前黄金摘要：
+
+| 产物 | SHA-256 |
+|---|---|
+| `position_control_v1.csv` | `9b65638bef0180b28dacd707eff9b2b2bc1394c27c65a85bf1c5318a325579b7` |
+| `attitude_control_v1.csv` | `fee1adc1165376eb3b8049a5b8b76e9ddc98cd8bf996c4840182a3e36d6e022b` |
+
+```bash
+export PYTHONNOUSERSITE=1
+source /home/ubuntu/.venvs/eso-simple-quadcopter-m2/bin/activate
+cd /home/ubuntu/ESO-simple-quadcopter
+python3 -m tools.pregme_reference.generate_control_golden_vectors \
+  --output-dir test/pregme/data
+python3 -m pytest test/pregme -q
+python3 -m pytest test/pregme -q -W error::RuntimeWarning
+```
+
+PR4 不修改已有位置/姿态 ESO 黄金数据，`pregme::algorithm_ready()` 继续保持
+`false`。统一闭环曲线、论文同类图和期望姿态导数策略属于后续 PR5。

@@ -131,3 +131,59 @@ beta_ddot = l^2*beta0*exp(-l*t) - b*(2*l+c)*exp(-(l+c)*t)
   `1.01013229 rad/s²`；从 0.5 跃迁至 1.5 的离散稳态约为
   `1.51933958 rad/s²`。阶跃“无过冲”相对于该离散稳态判定，而不是相对于
   不可达的连续目标值 1.5。
+
+## M2 PR4 控制律精确定义与新增约定
+
+PR4 开始前，以论文原文哈希
+`790069c4f56680fa0b937d67854beaff2057f74de847f159d3a825d2b63aa4a9`
+及本地论文文本提取哈希
+`4ae63cf8a00a6d9f7cbac2741cc53d711492d36e0954785d037e7cb8b9e68f9d`
+逐项核对式 (15)–(21)。文本提取只作为公式转录证据，不导入旧工程代码；
+本节追加后，当前仓库仍是唯一实现真源。
+
+式 (15)–(18) 的精确定义冻结为：
+
+```text
+a = [cos(psi_d), sin(psi_d), 0]^T
+b3 = T_vec / ||T_vec||
+b2 = (b3 × a) / ||b3 × a||
+b1 = b2 × b3
+R_d = [b1 b2 b3]
+
+R_tilde = R_d^T R
+omega_tilde = omega - R_tilde omega_d
+q0_dot = -0.5 qv^T omega_tilde
+qv_dot = 0.5 Q omega_tilde
+Q = q0 I_3 + [qv]x
+Q_dot = q0_dot I_3 + [qv_dot]x
+
+R_tilde_dot = -[omega_d]x R_tilde + R_tilde [omega]x
+f_q = 0.5 Q_dot omega_tilde
+      - 0.5 Q solve(I, omega × (I omega))
+      - 0.5 Q R_tilde_dot omega_d
+      - 0.5 Q R_tilde omega_d_dot
+```
+
+式 (19)–(21) 使用：
+
+```text
+z_q = qv - beta_q
+z_q_dot = qv_dot - beta_q_dot
+s_q = z_q_dot + Lambda_q z_q
+
+tau = 2 I solve(Q,
+  -f_q - 0.5 Q Delta_omega_hat + beta_q_ddot
+  - Lambda_q z_q_dot - K_q s_q)
+```
+
+新增实现约定：
+
+| 编号 | 冻结约定 | 实现影响 |
+|---|---|---|
+| A-04 | `R` 把 FRD 旋转到 NED，`b1,b2,b3` 作为 `R_d` 的列 | 悬停、零偏航得到单位阵，避免将 OCR 转置符号误作矩阵约定 |
+| A-05 | Hamilton `wxyz` 取 `q0>=0`；`q0<=1e-8` 拒绝 | 不在 180° 附近恢复轴后继续求解奇异 `Q` |
+| A-06 | PR4 接口显式接收 `omega_d,omega_d_dot` | 未唯一确定的四元数对数差分/20 Hz 低通状态机不在控制公式层猜测实现 |
+
+旋转矩阵必须在 `1e-10` 绝对容差内正交且行列式为 `+1`；控制力模或
+`||b3×a||` 不超过 `1e-12` 时拒绝式 (15)。式 (21) 与刚体项均使用线性
+求解，不显式构造矩阵逆。参考阶段不施加控制饱和、PX4 归一化或执行器分配。

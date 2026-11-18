@@ -88,3 +88,28 @@ M2 开始后追加公式级黄金向量：位置通道可做完整数值复现�
 | M2-GOLD-ATT-02 | pytest | 可追溯锚点 | 论文、fixture、metadata、三份源码和 CSV 哈希匹配；惯量占位信息完整 |
 | M2-GOLD-ATT-03 | pytest | 重新生成 | 临时目录生成的姿态 CSV/JSON 与版本化文件逐字节一致 |
 | M2-GOLD-ATT-04 | pytest | PR2 回归 | 位置黄金 CSV 哈希保持不变 |
+
+## M2 PR4：位置/姿态滑模误差与控制律
+
+| 编号 | 层级 | 场景 | 通过条件 |
+|---|---|---|---|
+| M2-CTRL-POS-01 | pytest | 位置误差 | `p_tilde/z/z_dot/s` 与独立定义逐元素一致 |
+| M2-CTRL-POS-02 | pytest | 编号式 (9) | 总质量、`p_d_ddot` 与 `+K_p s_p` 符号正确 |
+| M2-CTRL-POS-03 | pytest | 悬停/质量 | 零误差得到 `m g n`；质量加倍时力加倍 |
+| M2-CTRL-POS-04 | pytest | 闭环代数 | `s_dot=-K_p s+Delta_v-Delta_v_hat` |
+| M2-CTRL-POS-05 | pytest | 闭环包络 | 12 s 内误差不越界，终值进入 `rho_inf+1e-3 m` |
+| M2-CTRL-POS-06 | pytest | 非法输入 | 形状、非有限、质量及增益错误明确拒绝 |
+| M2-CTRL-ATT-01 | pytest | 式 (15) | 悬停、偏航和右手基向量约定正确 |
+| M2-CTRL-ATT-02 | pytest | 方向退化 | 零控制力及与偏航参考共线明确拒绝 |
+| M2-CTRL-ATT-03 | pytest | 式 (16) | 已知轴角的 `q0/qv/Q` 与 Hamilton 约定一致 |
+| M2-CTRL-ATT-04 | pytest | 姿态奇异 | 非 SO(3) 和 180° 邻域明确拒绝 |
+| M2-CTRL-ATT-05 | pytest | 四元数运动学 | `qv_dot` 与 SO(3) 中心差分 `rtol<1e-8` |
+| M2-CTRL-ATT-06 | pytest | 姿态滑模 | `omega_tilde/z/z_dot/s` 与独立定义一致 |
+| M2-CTRL-ATT-07 | pytest | 式 (18)(21) | `f_q` 和力矩与独立展开 `rtol=1e-13` |
+| M2-CTRL-ATT-08 | pytest | 闭环代数 | `s_dot=-K_q s+0.5Q(Delta-Delta_hat)` |
+| M2-CTRL-ATT-09 | pytest | 闭环包络 | fixture 惯量下 8 s 内不越界，终值进入 `rho_inf+1e-3` |
+| M2-CTRL-ATT-10 | pytest | 保护/所有权 | 惯量和增益校验；输入不变、输出只读 |
+| M2-GOLD-CTRL-01 | pytest | CSV schema | 两份 CSV 的列、单位、算例和有限性正确 |
+| M2-GOLD-CTRL-02 | pytest | 可追溯锚点 | 论文、fixture、placeholder、源码和 CSV 哈希匹配 |
+| M2-GOLD-CTRL-03 | pytest | 重新生成 | 两份 CSV 和 JSON 清单逐字节一致 |
+| M2-GOLD-CTRL-04 | pytest | PR2/PR3 回归 | 两份 ESO 黄金 CSV 哈希保持不变 |

@@ -6,6 +6,19 @@ from .attitude import AttitudeEsoEstimate
 from .attitude import AttitudeEsoUpdate
 from .attitude import attitude_eso_config_from_paper
 from .attitude import rigid_body_known_angular_acceleration
+from .control import AttitudeControlResult
+from .control import AttitudeErrorTerms
+from .control import DesiredAttitude
+from .control import PositionControlConfig
+from .control import PositionErrorTerms
+from .control import attitude_control_torque
+from .control import attitude_error_terms
+from .control import desired_attitude
+from .control import position_control_config_from_paper
+from .control import position_control_force
+from .control import position_error_terms
+from .control import position_known_acceleration
+from .control import skew_matrix
 from .equations import GRAVITY_M_S2
 from .equations import PaperParameters
 from .equations import load_paper_default
@@ -34,22 +47,35 @@ __all__ = [
     "AttitudeEsoConfig",
     "AttitudeEsoEstimate",
     "AttitudeEsoUpdate",
+    "AttitudeControlResult",
+    "AttitudeErrorTerms",
+    "DesiredAttitude",
     "EsoUpdate",
     "EsoUpdateStatus",
     "PositionEso",
     "PositionEsoConfig",
     "PositionEsoEstimate",
+    "PositionControlConfig",
+    "PositionErrorTerms",
+    "attitude_control_torque",
+    "attitude_error_terms",
     "attitude_eso_config_from_paper",
     "envelope",
     "envelope_dot",
+    "desired_attitude",
     "load_paper_default",
     "paper_default_sha256",
     "position_eso_config_from_paper",
+    "position_control_config_from_paper",
+    "position_control_force",
+    "position_error_terms",
+    "position_known_acceleration",
     "preset_trajectory",
     "preset_trajectory_b",
     "preset_trajectory_ddot",
     "preset_trajectory_dot",
     "rigid_body_known_angular_acceleration",
+    "skew_matrix",
     "validate_parameters",
     "variable_gain",
     "variable_gain_eso_estimate",
