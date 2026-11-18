@@ -67,3 +67,24 @@ M2 开始后追加公式级黄金向量：位置通道可做完整数值复现�
 | M2-GOLD-POS-01 | pytest | CSV schema | 列、单位、样本数、时间戳和有限性正确 |
 | M2-GOLD-POS-02 | pytest | 可追溯锚点 | 论文、fixture、生成器和 CSV 哈希匹配 |
 | M2-GOLD-POS-03 | pytest | 重新生成 | 临时目录生成的 CSV/JSON 与版本化文件逐字节一致 |
+
+## M2 PR3：姿态 ESO 与合成夹具黄金向量
+
+| 编号 | 层级 | 场景 | 通过条件 |
+|---|---|---|---|
+| M2-ATT-01 | pytest | 首样本 | `h_omega=omega`、创新和扰动估计为零，不积分 |
+| M2-ATT-02 | pytest | 唯一 ESO 内核 | 姿态包装与共享式 (3) 状态机逐元素一致 |
+| M2-ATT-03 | pytest | 零角速度 | 式 (13) 化为 `solve(I,tau)` |
+| M2-ATT-04 | pytest | 陀螺项符号 | `omega×(I omega)` 三轴展开及负号正确 |
+| M2-ATT-05 | pytest | 惯量缩放 | 零角速度下惯量加倍使角加速度减半 |
+| M2-ATT-06 | pytest | 非法惯量 | 错误形状、非对称、非正定、非有限明确拒绝 |
+| M2-ATT-07 | pytest | 时间与复位 | 重复、倒退、失效锁存和显式复位与共享状态机一致 |
+| M2-ATT-08 | pytest | 常值扰动 | z 轴单位扰动 10 s 误差 `<1.1e-2 rad/s²` |
+| M2-ATT-09 | pytest | 阶跃扰动 | 估计单调且不超过已登记的离散稳态 |
+| M2-ATT-10 | pytest | 三轴独立 | 不同 `alpha/epsilon` 与三个独立通道一致 |
+| M2-ATT-11 | pytest | 正弦与噪声 | 低频相关性 `>0.7`；固定 seed 可逐数组复现 |
+| M2-ATT-12 | pytest | 参数与所有权 | 使用 `epsilon_omega`；入参不变且输出只读 |
+| M2-GOLD-ATT-01 | pytest | CSV schema | 列、单位、样本数、时间戳、状态和有限性正确 |
+| M2-GOLD-ATT-02 | pytest | 可追溯锚点 | 论文、fixture、metadata、三份源码和 CSV 哈希匹配；惯量占位信息完整 |
+| M2-GOLD-ATT-03 | pytest | 重新生成 | 临时目录生成的姿态 CSV/JSON 与版本化文件逐字节一致 |
+| M2-GOLD-ATT-04 | pytest | PR2 回归 | 位置黄金 CSV 哈希保持不变 |

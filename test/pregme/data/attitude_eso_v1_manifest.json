@@ -1,0 +1,117 @@
+{
+  "columns": [
+    "timestamp_us",
+    "time_s",
+    "angular_velocity_frd_rad_s_x",
+    "angular_velocity_frd_rad_s_y",
+    "angular_velocity_frd_rad_s_z",
+    "torque_frd_n_m_x",
+    "torque_frd_n_m_y",
+    "torque_frd_n_m_z",
+    "known_angular_acceleration_frd_rad_s2_x",
+    "known_angular_acceleration_frd_rad_s2_y",
+    "known_angular_acceleration_frd_rad_s2_z",
+    "true_disturbance_frd_rad_s2_x",
+    "true_disturbance_frd_rad_s2_y",
+    "true_disturbance_frd_rad_s2_z",
+    "h_omega_frd_rad_s_x",
+    "h_omega_frd_rad_s_y",
+    "h_omega_frd_rad_s_z",
+    "innovation_frd_rad_s_x",
+    "innovation_frd_rad_s_y",
+    "innovation_frd_rad_s_z",
+    "disturbance_hat_frd_rad_s2_x",
+    "disturbance_hat_frd_rad_s2_y",
+    "disturbance_hat_frd_rad_s2_z",
+    "status",
+    "integrated"
+  ],
+  "csv_sha256": "2b1bd64596c8e73488502b89ca32485a1daa20ba088992119fb5fd7f2099e9ac",
+  "dataset_id": "attitude_eso_composite_v1",
+  "dt_s": 0.01,
+  "estimate_semantics": "current omega minus updated h_omega",
+  "fixture": {
+    "file_sha256": "d776911e54a1f35c2c61e876298bfb9ce9de9735159efd05a93998e7de1769fe",
+    "id": "m2_fixture_v1",
+    "metadata_sha256": "dec020a457f563dc143b07e4e8e82d3e0c68ff73a8541dce42ef4ebe8308d80a",
+    "parameter_set_sha256": "072d67e9ccfbfb78abbf7fed9625f4490b8a76a259a041abe97d864a17036764",
+    "watermark": "FIXTURE:m2_fixture_v1:072d67e9ccfb"
+  },
+  "formula": [
+    "(3)",
+    "(13)",
+    "(14)"
+  ],
+  "frame": "FRD",
+  "hold_semantics": "previous-sample zero-order hold on omega and u_omega",
+  "implementation_baseline_commit": "1c435abc513a55c279520095af67222cc2217db7",
+  "inertia": {
+    "failure_consequence": "blocks torque magnitude and saturation claims, not symbolic tracking-curve checks",
+    "frame": "quadcopter_body_FRD",
+    "matrix_kg_m2": [
+      [
+        0.48,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.48,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.7
+      ]
+    ],
+    "replacement_condition": "replace with measured quadrotor body inertia before HIL or hardware control",
+    "source": "synthetic dimensional fixture constrained by reported mass and wheelbase",
+    "status": "placeholder"
+  },
+  "numpy": "1.21.5",
+  "paper": {
+    "identifier": "arXiv:2512.22957",
+    "paper_default_sha256": "6f7559bad4f0f3e28a81b2cbfa0d552bc51c8b024d6b509a1bb0bd7780b2bf8b",
+    "source_sha256": "790069c4f56680fa0b937d67854beaff2057f74de847f159d3a825d2b63aa4a9"
+  },
+  "parameters": {
+    "alpha_omega": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "d": 5.0,
+    "epsilon_omega": [
+      0.25,
+      0.25,
+      0.25
+    ],
+    "maximum_period_s": 0.02,
+    "minimum_period_s": 0.005,
+    "w": 0.5
+  },
+  "python": "3.10.12",
+  "random_noise_used": false,
+  "sample_count": 1201,
+  "scenario": "composite",
+  "schema_version": 1,
+  "seed": 20261118,
+  "source_sha256": {
+    "attitude": "263d51ab8e38cd9ae2c65f52d8af12b770f806328d5fe832fda08af79592725e",
+    "generator": "6849c8b59f3e22564b0c986c41fcc2fc29084c5b6673c3c15545ac4e7c6ce740",
+    "shared_eso": "82241e444beb2c23956c226ac8d526918284220ba5bf782deb9fc68f2eec217c"
+  },
+  "truth_integration": "explicit Euler independent of observer RK4",
+  "units": {
+    "angular_velocity_frd_rad_s": "rad/s",
+    "disturbance_hat_frd_rad_s2": "rad/s^2",
+    "h_omega_frd_rad_s": "rad/s",
+    "innovation_frd_rad_s": "rad/s",
+    "known_angular_acceleration_frd_rad_s2": "rad/s^2",
+    "time_s": "s",
+    "timestamp_us": "us",
+    "torque_frd_n_m": "N*m",
+    "true_disturbance_frd_rad_s2": "rad/s^2"
+  }
+}

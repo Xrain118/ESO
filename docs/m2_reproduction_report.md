@@ -1,7 +1,7 @@
 # M2 PreGME 公式复现报告
 
-> 状态：PR1 / T02，性能包络、预设误差轨迹与变增益函数
-> 实现基线：`5e738e6`（最终提交以 `git rev-parse HEAD` 输出为准）
+> 状态：PR1–PR3 / T02–T04，公式基础、位置 ESO 与姿态 ESO 黄金数据
+> 初始实现基线：`5e738e6`；PR3 基线：`1c435ab`（最终提交以 `git rev-parse HEAD` 输出为准）
 
 ## 复现目标
 
@@ -179,3 +179,71 @@ python3 -m pytest test/pregme -q -W error::RuntimeWarning
 
 控制周期仍是 M2 fixture 的工程占位，论文未报告实际控制器周期；PR2 不据此
 宣称论文时序保真度，也不启用任何生产控制路径。
+
+## PR3 姿态 ESO 与合成夹具黄金向量
+
+### 实现范围与唯一公式内核
+
+PR3 完成论文式 (13) 的刚体已知角加速度和式 (14) 的机体 FRD 三轴姿态
+ESO。姿态状态机通过组合 `PositionEso` 复用 PR2 的式 (3) RK4、变增益、
+前一帧保持、重复样本和失效锁存逻辑；姿态层只把字段映射为
+`h_omega`、角速度创新和 `Delta_omega_hat`，没有第二份观测器数学实现。
+
+已知角加速度使用：
+
+```text
+u_omega = solve(I, tau - omega × (I omega))
+```
+
+全部量沿机体 FRD，`omega` 为 rad/s，`tau` 为 N·m，`I` 为 kg·m²，
+`u_omega` 为 rad/s²。实现不显式求逆，并在计算前检查惯量有限、对称和正定。
+姿态配置读取论文式 (14) 的 `epsilon_omega=[0.25,0.25,0.25]`；测试明确证明
+没有误用位置通道 `epsilon`。
+
+### 合成惯量边界
+
+姿态黄金向量使用 M2 fixture 的
+`diag(0.48,0.48,0.70) kg·m²`。该矩阵状态为 `placeholder`，来源是按论文
+报告质量和轴距约束量级的合成夹具，论文永久缺失真实惯量。JSON 清单逐字
+记录它的来源、FRD 坐标、替换条件和失效后果：HIL/硬件控制前必须换成实测
+惯量；当前结果阻塞力矩幅值和饱和结论，但不阻塞式 (13)/(14) 的结构与符号
+验证。所有黄金输出继续携带水印 `FIXTURE:m2_fixture_v1:072d67e9ccfb`。
+
+### 场景、真值与离散偏差
+
+版本化 `attitude_eso_v1.csv` 为 12 s、100 Hz、1201 样本的无噪声复合场景：
+非零初始角速度 `[0.12,-0.08,0.05] rad/s`，依次覆盖零输入、已知力矩、
+三轴阶跃扰动和确定性正弦扰动。CSV 同时记录力矩和由式 (13) 得到的已知角
+加速度，便于审阅符号与惯量换算。
+
+真值不调用 ESO RK4，而以显式欧拉独立推进：
+
+```text
+u_omega[k] = solve(I, tau[k] - omega[k] × (I omega[k]))
+omega[k+1] = omega[k] + dt*(u_omega[k] + Delta_omega[k])
+```
+
+观测器仍在区间内保持上一帧 `omega,u_omega`，并在当前创新上求值。默认姿态
+增益下，z 轴单位常值扰动在 10 s 的估计约为 `1.01013229 rad/s²`；0.5 到
+1.5 阶跃的离散稳态约为 `1.51933958 rad/s²`。测试要求单调且不超过离散
+稳态，而不把前一帧保持产生的 `O(dt)` 偏差误判成瞬态过冲。
+
+### 黄金锚点和重跑
+
+姿态清单记录论文/fixture/metadata 哈希、惯量占位说明、共享 ESO、姿态包装、
+生成器及 CSV 的源码/数据哈希、基线提交 `1c435ab`、环境和种子。PR3 不修改
+PR2 位置生成器或位置黄金文件，回归测试固定位置 CSV SHA-256 为
+`04de6cc179b16698d32ef10338aff0855afbb903a482e648b2aa8c7e51916d14`。
+
+```bash
+export PYTHONNOUSERSITE=1
+source /home/ubuntu/.venvs/eso-simple-quadcopter-m2/bin/activate
+cd /home/ubuntu/ESO-simple-quadcopter
+python3 -m tools.pregme_reference.generate_attitude_golden_vectors \
+  --scenario composite --seed 20261118 --output-dir test/pregme/data
+python3 -m pytest test/pregme -q
+python3 -m pytest test/pregme -q -W error::RuntimeWarning
+```
+
+PR3 不实现姿态误差、期望姿态、滑模或控制律，不修改 C++、ROS、PX4 接口或
+飞行输出，`pregme::algorithm_ready()` 继续保持 `false`。

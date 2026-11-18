@@ -1,5 +1,11 @@
 """PreGME 论文公式级 Python 参考实现。"""
 
+from .attitude import AttitudeEso
+from .attitude import AttitudeEsoConfig
+from .attitude import AttitudeEsoEstimate
+from .attitude import AttitudeEsoUpdate
+from .attitude import attitude_eso_config_from_paper
+from .attitude import rigid_body_known_angular_acceleration
 from .equations import GRAVITY_M_S2
 from .equations import PaperParameters
 from .equations import load_paper_default
@@ -24,11 +30,16 @@ from .eso import variable_gain_eso_rk4_step
 __all__ = [
     "GRAVITY_M_S2",
     "PaperParameters",
+    "AttitudeEso",
+    "AttitudeEsoConfig",
+    "AttitudeEsoEstimate",
+    "AttitudeEsoUpdate",
     "EsoUpdate",
     "EsoUpdateStatus",
     "PositionEso",
     "PositionEsoConfig",
     "PositionEsoEstimate",
+    "attitude_eso_config_from_paper",
     "envelope",
     "envelope_dot",
     "load_paper_default",
@@ -38,6 +49,7 @@ __all__ = [
     "preset_trajectory_b",
     "preset_trajectory_ddot",
     "preset_trajectory_dot",
+    "rigid_body_known_angular_acceleration",
     "validate_parameters",
     "variable_gain",
     "variable_gain_eso_estimate",
