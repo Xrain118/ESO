@@ -1,0 +1,35 @@
+{
+  "assets_sha256": {
+    "m2_control_inputs.png": "9a24fe1dee12c599f16b853612aa303f5635003aa3f3c2b7dbd7c18929ed8c80",
+    "m2_control_inputs.svg": "0641019061208c94b27c7a00944431a6381433e260d9260a7e120a526cb4b94f",
+    "m2_eso_estimates.png": "083eb048412d069243be26d02df713f1b864747344249f728203cb0b65657c71",
+    "m2_eso_estimates.svg": "67ae5c8aa08f1ccec3183d0669a0b7ef8603ec169fc0ce268518d62d031a44ba",
+    "m2_sliding_vectors.png": "5b408795fb04d6f7f4bc9beb953eb7f32d330d4feca202bddf9861d4a657121f",
+    "m2_sliding_vectors.svg": "150eafed608a2ae113eed11a8879d7d6d30ae9c86570710220d1680c17f3eb40",
+    "m2_tracking_envelopes.png": "278c357008befd1861561a1a9518fcfa0bd4833526fb6025d3ca222fa8363116",
+    "m2_tracking_envelopes.svg": "7326c18f7e80622dda3c7843319c842f826ebb24e8c2061c0a6f0e6e0f5eafeb"
+  },
+  "backend": "agg",
+  "dataset_id": "synthetic_closed_loop_v1",
+  "dpi": 150,
+  "figure_size_inches": [
+    12.0,
+    6.0
+  ],
+  "matplotlib": "3.5.1",
+  "pixel_size": [
+    1800,
+    900
+  ],
+  "schema_version": 1,
+  "source_sha256": {
+    "closed_loop_attitude": "7fd551731b20043423ed8b749ef91d11c095cf6766071c19773fb07dac73a83f",
+    "closed_loop_manifest": "aae35892bb03bbceae69a4fcbb29b175671b774078275678d4ff1f3a35f39f7b",
+    "closed_loop_position": "ebba214db099b50e7fe31b85cc56e7b6b606e0820491f8bbb66554b642f3c25a",
+    "plot_reproduction": "4e9f0b9a87c15869e2d8e50f8d093367d7c24382631aa8d152275e87b6a67aba"
+  },
+  "watermarks": [
+    "SYNTHETIC M2 FIXTURE — NOT PAPER EXPERIMENT",
+    "FIXTURE:m2_fixture_v1:072d67e9ccfb"
+  ]
+}

@@ -305,3 +305,77 @@ python3 -m pytest test/pregme -q -W error::RuntimeWarning
 
 PR4 不修改已有位置/姿态 ESO 黄金数据，`pregme::algorithm_ready()` 继续保持
 `false`。统一闭环曲线、论文同类图和期望姿态导数策略属于后续 PR5。
+
+## T06 统一合成闭环曲线与指标
+
+### 证据边界
+
+T06 是公式级、合成、离线复现，不是论文实验复现。它没有导入论文实验数据，
+也没有作者控制周期、真实惯量、饱和器、PX4 分配器、SITL、HIL 或实机数据。
+因此本节只能证明 PR1–PR4 的公式在冻结离散语义下可组成确定性闭环，并且
+误差保持在预设包络内，不能证明与论文图中瞬态、稳态或硬件性能一致。
+
+### 场景与因果顺序
+
+版本化场景为 16 s、100 Hz、1601 样本。位置初值为
+`[0,0,-1.5] m`，目标为 `[0.8,-0.8,-0.7] m`；期望姿态为单位阵，初始姿态
+绕 FRD x 轴旋转 `0.3 rad`。扰动在 2 s 加入常值，在 8 s 切换为带常值偏置
+的 0.5 Hz 三轴正弦。
+
+每个样本严格按以下因果顺序处理：
+
+1. 用上一帧测量和已知输入推进 ESO；
+2. 在当前测量上解析计算创新与扰动估计；
+3. 计算当前物理力/力矩；
+4. 推进下一帧合成真值。
+
+位置真值用恒加速度 ZOH 解析更新；角速度用保持力矩/扰动的独立 RK4；旋转
+矩阵按 A-07 用区间端点角速度平均值和 SO(3) 指数映射更新。场景没有随机数。
+
+### 结果摘要
+
+| 指标 | 结果 | 解释 |
+|---|---:|---|
+| 位置最小包络余量 | `0.0283554 m` | 全时段严格大于零 |
+| 位置末端最大绝对误差 | `0.0055623 m` | 小于 `0.01 m` 验收线 |
+| 姿态最小包络余量 | `0.0598314` | 四元数向量全时段严格在包络内 |
+| 姿态末端最大绝对 `qv` | `0.000160104` | 小于 `3e-4` 验收线 |
+| 最大旋转正交误差 | `9.88098e-15` | 小于 `1e-10` |
+| 最大旋转行列式误差 | `5.44009e-15` | 小于 `1e-10` |
+| 最大绝对位置力 | `78.7808 N` | 仅记录，不作硬件验收 |
+| 最大绝对姿态力矩 | `0.870539 N·m` | 仅记录，占位惯量下无硬件含义 |
+
+0.5 Hz 正弦段存在观测器相位滞后，所以没有用相关系数替代误差指标；清单逐轴
+记录全时段 RMSE。位置为
+`[0.1803169,0.1390235,0.1072423] m/s²`，姿态为
+`[0.0386724,0.0295829,0.0239860] rad/s²`。这些数值用于回归，不作为控制器
+优劣结论。
+
+### 产物与重跑
+
+- `test/pregme/data/closed_loop_position_v1.csv`
+- `test/pregme/data/closed_loop_attitude_v1.csv`
+- `test/pregme/data/closed_loop_v1_manifest.json`
+- `docs/figures/m2/m2_tracking_envelopes.{png,svg}`
+- `docs/figures/m2/m2_eso_estimates.{png,svg}`
+- `docs/figures/m2/m2_sliding_vectors.{png,svg}`
+- `docs/figures/m2/m2_control_inputs.{png,svg}`
+- `docs/figures/m2/m2_plot_manifest.json`
+
+每张图同时显示 `SYNTHETIC M2 FIXTURE — NOT PAPER EXPERIMENT` 和 fixture
+水印。数据、生成器、绘图脚本及资产哈希由两个 JSON 清单固定。
+
+```bash
+export PYTHONNOUSERSITE=1
+source /home/ubuntu/.venvs/eso-simple-quadcopter-m2/bin/activate
+cd /home/ubuntu/ESO-simple-quadcopter
+python3 -m tools.pregme_reference.generate_closed_loop_vectors \
+  --output-dir test/pregme/data
+python3 -m tools.pregme_reference.plot_reproduction \
+  --data-dir test/pregme/data --output-dir docs/figures/m2
+python3 -m pytest test/pregme -q
+python3 -m pytest test/pregme -q -W error::RuntimeWarning
+```
+
+T06 不修改 C++、ROS、PX4 接口、配置或飞行输出，`algorithm_ready()` 仍为
+`false`。下一步 T08 才进入无 ROS 依赖的 C++ 数学核心。

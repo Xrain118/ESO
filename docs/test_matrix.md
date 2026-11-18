@@ -113,3 +113,21 @@ M2 开始后追加公式级黄金向量：位置通道可做完整数值复现�
 | M2-GOLD-CTRL-02 | pytest | 可追溯锚点 | 论文、fixture、placeholder、源码和 CSV 哈希匹配 |
 | M2-GOLD-CTRL-03 | pytest | 重新生成 | 两份 CSV 和 JSON 清单逐字节一致 |
 | M2-GOLD-CTRL-04 | pytest | PR2/PR3 回归 | 两份 ESO 黄金 CSV 哈希保持不变 |
+
+## M2 T06：合成闭环、统一曲线与复现指标
+
+| 编号 | 层级 | 场景 | 通过条件 |
+|---|---|---|---|
+| M2-CLOSE-01 | pytest | CSV schema 与时间轴 | 两份 CSV 各 1601 样本、100 Hz、列/状态/有限性正确 |
+| M2-CLOSE-02 | pytest | ESO 初始化 | 首样本严格满足 `h=y`、创新和扰动估计为零 |
+| M2-CLOSE-03 | pytest | 因果离散顺序 | 代表时刻与前一帧保持 RK4 和当前创新独立重算逐元素一致 |
+| M2-CLOSE-04 | pytest | 误差与滑模定义 | `tracking_error/z/z_dot/s` 与冻结公式逐元素一致 |
+| M2-CLOSE-05 | pytest | 性能包络 | 位置最小余量 `>0.02 m`、末误差 `<0.01 m`；姿态最小余量 `>0.05`、末 `max|qv|<3e-4` |
+| M2-CLOSE-06 | pytest | 扰动时序 | 2 s 常值阶跃、8 s 三轴 0.5 Hz 正弦的边界和相位正确 |
+| M2-CLOSE-07 | pytest | 姿态/控制/指标 | `R` 正交与行列式误差 `<1e-10`，控制量和清单指标有限且明确为合成数据 |
+| M2-CLOSE-08 | pytest | 哈希和完整再生 | 源码、历史黄金数据哈希匹配；两份闭环 CSV/JSON 逐字节再生 |
+| M2-FIG-01 | pytest | 图形资产 | 四组 PNG/SVG 齐全，PNG 为 `1800×900`，SVG 画布固定 |
+| M2-FIG-02 | pytest | 强制水印 | 每份 SVG 同时包含合成夹具警告和 fixture 水印 |
+| M2-FIG-03 | pytest | 图形清单 | 后端、尺寸、源码、数据和八份资产哈希全部匹配 |
+| M2-FIG-04 | pytest | 绘图再生 | 从版本化闭环数据重画时 PNG/SVG/JSON 逐字节一致 |
+| M2-FIG-05 | pytest | 全链路再生 | 临时目录内从公式生成数据再生成图，全部产物逐字节一致 |
