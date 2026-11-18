@@ -116,3 +116,66 @@ git diff --stat
 - 姿态通道只能在后续 PR3 使用合成夹具验证结构、符号和量纲，不能宣称力矩
   幅值复现。
 - PR2 才实现位置 ESO、RK4 时间推进和黄金数据；PR1 不提供伪实现。
+
+## PR2 位置 ESO 参考实现
+
+### 复现目标与接口
+
+PR2 实现论文式 (3) 通用变增益 ESO 内核和式 (7) 的 NED 三轴位置实例。
+位置通道不依赖缺失的惯量矩阵，因此可声明公式与数值实现完整；本阶段只接收
+式 (6) 的已知加速度输入 `u_v`，不构造推力或位置控制律。
+
+通用实现拆成两个纯函数：RK4 函数只推进 `h`，估计函数在指定的 `h,y` 上
+解析计算创新和 `Delta_hat`。`PositionEso` 负责微秒时间戳、前一帧零阶保持、
+初始化、重复消息和锁存失效。PR3 姿态 ESO 必须复用这两个纯函数。
+
+### 离散和失效决定
+
+- 区间 `[t[k-1],t[k]]` 使用 `v[k-1],u_v[k-1]` 进行四阶 RK 积分；输出
+  `Delta_v_hat[k]` 在 `v[k]-h_v[k]` 上求值，不通过状态差分反推。
+- 首样本严格执行 `h_v=v`，创新和扰动估计为零，不推进积分器。
+- 相等时间戳为良性重复，不消费载荷；零值、倒退、周期越界、错误形状和
+  非有限输入锁存失效。失效后必须显式 `reset()` 才能重新初始化。
+- 前一帧测量保持会产生 `O(dt)` 对齐误差：论文参数、`dt=0.01 s`、单位
+  常值扰动下，稳态估计约为 `1.00277019 m/s²`。因此验收界设为
+  `max|Delta_hat-Delta|<3e-3 m/s²`，不采用不可达的 `1e-6` 相对误差。
+- 只有零输入/零扰动场景能保持逐元素精确零；非零已知输入场景通过步长减半
+  验证对齐误差约减半，不把该离散效应误判成公式错误。
+
+### 黄金数据
+
+版本化产物为 `test/pregme/data/position_eso_v1.csv` 与对应 JSON 清单，共
+1201 个 100 Hz 样本。复合场景包含非零初始速度、静止、已知输入、阶跃扰动
+和确定性正弦扰动，不包含随机噪声。CSV 使用 17 位有效数字；JSON 记录：
+
+- 论文参数文件 SHA-256：`6f7559bad4f0f3e28a81b2cbfa0d552bc51c8b024d6b509a1bb0bd7780b2bf8b`；
+- fixture 文件 SHA-256：`d776911e54a1f35c2c61e876298bfb9ce9de9735159efd05a93998e7de1769fe`；
+- fixture 水印：`FIXTURE:m2_fixture_v1:072d67e9ccfb`；
+- 实现基线、生成器源码 SHA-256、CSV SHA-256、参数、列、单位和保持语义。
+
+静止、已知输入、常值、阶跃、正弦、固定种子噪声和非零初始速度的完整场景
+矩阵由 pytest 动态生成。噪声标准差为 `1e-3 m/s`，默认种子为 `20261118`。
+
+### PR2 容差与重跑
+
+| 检查 | 通过条件 |
+|---|---|
+| 常值扰动 | 60 s 末端最大绝对估计误差 `<3e-3 m/s²` |
+| 阶跃扰动 | 阶跃后逐样本单调且不超过目标值 |
+| RK4 | 线性闭式解绝对误差 `<1e-10`，步长减半误差比接近 `1/16` |
+| 三轴独立 | `rtol=1e-15, atol=0` |
+| 大创新 | 有限且大量区近似 `rtol=1e-12` |
+| CSV 时间列 | 整数时间戳精确；十进制回读步长绝对误差 `<2e-15 s` |
+
+```bash
+export PYTHONNOUSERSITE=1
+source /home/ubuntu/.venvs/eso-simple-quadcopter-m2/bin/activate
+cd /home/ubuntu/ESO-simple-quadcopter
+python3 -m tools.pregme_reference.generate_golden_vectors \
+  --scenario composite --seed 20261118 --output-dir test/pregme/data
+python3 -m pytest test/pregme -q
+python3 -m pytest test/pregme -q -W error::RuntimeWarning
+```
+
+控制周期仍是 M2 fixture 的工程占位，论文未报告实际控制器周期；PR2 不据此
+宣称论文时序保真度，也不启用任何生产控制路径。

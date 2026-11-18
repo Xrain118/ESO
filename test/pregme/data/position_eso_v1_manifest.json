@@ -1,0 +1,82 @@
+{
+  "columns": [
+    "timestamp_us",
+    "time_s",
+    "velocity_ned_m_s_x",
+    "velocity_ned_m_s_y",
+    "velocity_ned_m_s_z",
+    "known_acceleration_ned_m_s2_x",
+    "known_acceleration_ned_m_s2_y",
+    "known_acceleration_ned_m_s2_z",
+    "true_disturbance_ned_m_s2_x",
+    "true_disturbance_ned_m_s2_y",
+    "true_disturbance_ned_m_s2_z",
+    "h_v_ned_m_s_x",
+    "h_v_ned_m_s_y",
+    "h_v_ned_m_s_z",
+    "innovation_ned_m_s_x",
+    "innovation_ned_m_s_y",
+    "innovation_ned_m_s_z",
+    "disturbance_hat_ned_m_s2_x",
+    "disturbance_hat_ned_m_s2_y",
+    "disturbance_hat_ned_m_s2_z",
+    "status",
+    "integrated"
+  ],
+  "csv_sha256": "04de6cc179b16698d32ef10338aff0855afbb903a482e648b2aa8c7e51916d14",
+  "dataset_id": "position_eso_composite_v1",
+  "dt_s": 0.01,
+  "estimate_semantics": "current y minus updated h",
+  "fixture": {
+    "file_sha256": "d776911e54a1f35c2c61e876298bfb9ce9de9735159efd05a93998e7de1769fe",
+    "id": "m2_fixture_v1",
+    "parameter_set_sha256": "072d67e9ccfbfb78abbf7fed9625f4490b8a76a259a041abe97d864a17036764",
+    "watermark": "FIXTURE:m2_fixture_v1:072d67e9ccfb"
+  },
+  "formula": [
+    "(3)",
+    "(7)"
+  ],
+  "frame": "NED",
+  "generator_source_sha256": "df0fcb47adf44873a8c0b0d083f903afdb7ad900f7a36d6bf92d8d4c6940d21c",
+  "hold_semantics": "previous-sample zero-order hold on y and u",
+  "implementation_baseline_commit": "fdc34c3e557233bde199d1af23e7ac857701a1a9",
+  "numpy": "1.21.5",
+  "paper": {
+    "identifier": "arXiv:2512.22957",
+    "paper_default_sha256": "6f7559bad4f0f3e28a81b2cbfa0d552bc51c8b024d6b509a1bb0bd7780b2bf8b",
+    "source_sha256": "790069c4f56680fa0b937d67854beaff2057f74de847f159d3a825d2b63aa4a9"
+  },
+  "parameters": {
+    "alpha": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "d": 5.0,
+    "epsilon": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "maximum_period_s": 0.02,
+    "minimum_period_s": 0.005,
+    "w": 0.5
+  },
+  "python": "3.10.12",
+  "random_noise_used": false,
+  "sample_count": 1201,
+  "scenario": "composite",
+  "schema_version": 1,
+  "seed": 20261118,
+  "units": {
+    "disturbance_hat_ned_m_s2": "m/s^2",
+    "h_v_ned_m_s": "m/s",
+    "innovation_ned_m_s": "m/s",
+    "known_acceleration_ned_m_s2": "m/s^2",
+    "time_s": "s",
+    "timestamp_us": "us",
+    "true_disturbance_ned_m_s2": "m/s^2",
+    "velocity_ned_m_s": "m/s"
+  }
+}
